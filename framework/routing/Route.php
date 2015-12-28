@@ -36,12 +36,17 @@ class Route
 		}
 	}
 	
+	public function getUrl()
+	{
+		return $this->url;
+	}
+	
 	public function getName()
 	{
 		return $this->name;
 	}
 	
-	public function getUrl(array $parameters = [])
+	public function generateLink(array $parameters = [])
 	{
 		$url = $this->url;
 		

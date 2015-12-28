@@ -32,7 +32,7 @@ class Router
 		{
 			if ($route->getName() === $name)
 			{
-				return $route->getUrl($parameters);
+				return $route->generateLink($parameters);
 			}
 		}
 		
@@ -99,6 +99,7 @@ class Router
 			
 			usort($routes, function (Route $a, Route $b)
 			{
+				// sort by route length descending
 				return (strlen($b->getUrl()) <=> strlen($a->getUrl()));
 			});
 		}
