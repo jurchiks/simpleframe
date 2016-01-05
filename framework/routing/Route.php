@@ -91,7 +91,7 @@ class Route
 			
 			$parameters = [];
 		}
-		else if (preg_match($this->pattern, $path, $parameters) === false)
+		else if (preg_match($this->pattern, $path, $parameters) !== 1)
 		{
 			return false;
 		}
@@ -230,7 +230,7 @@ class Route
 					throw new InvalidArgumentException('Unsupported parameter type ' . gettype($value));
 				}
 				
-				$realParameters[$parameter->getName()] = $urlParameters[$parameter->getName()];
+				$realParameters[$parameter->getName()] = $value;
 			}
 			else if ($parameter->isOptional())
 			{
@@ -238,6 +238,7 @@ class Route
 			}
 			else
 			{
+				throw new RouteException('Missing required parameter ' . $parameter->getName());
 			}
 		}
 		
