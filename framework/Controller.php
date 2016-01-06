@@ -5,7 +5,7 @@ use routing\Router;
 
 abstract class Controller
 {
-	protected function route(string $name, array $namedParameters = [], array $getParams = [], bool $urlEncoded = false)
+	protected static function route(string $name, array $namedParameters = [], array $getParams = [], bool $urlEncoded = false)
 	{
 		if (empty($getParams))
 		{
@@ -19,12 +19,12 @@ abstract class Controller
 		return Router::link($name, $namedParameters) . $query;
 	}
 	
-	protected function template(string $name, array $data = [])
+	protected static function template(string $name, array $data = [])
 	{
 		return new TemplateResponse($name, $data);
 	}
 	
-	protected function error($message, int $code = 500)
+	protected static function error($message, int $code = 500)
 	{
 		return new ErrorResponse($message, $code);
 	}
