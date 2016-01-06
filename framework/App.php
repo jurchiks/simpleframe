@@ -35,7 +35,7 @@ final class App
 				{
 					$handler = self::$exceptionHandlers[get_class($e)];
 					
-					if ($handler())
+					if ($handler($e))
 					{
 						return;
 					}
