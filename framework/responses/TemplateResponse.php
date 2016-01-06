@@ -27,7 +27,7 @@ class TemplateResponse extends TextResponse
 	
 	public function render()
 	{
-		$data = $this->data; // set variables for template scope
+		extract($this->data, EXTR_SKIP);
 		include $this->file;
 	}
 }
