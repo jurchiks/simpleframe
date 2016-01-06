@@ -14,7 +14,7 @@ class Route
 {
 	/** @var string */
 	private $url;
-	/** @var array */
+	/** @var callable */
 	private $handler;
 	/** @var string */
 	private $name;
@@ -23,7 +23,7 @@ class Route
 	/** @var string */
 	private $pattern = '';
 	
-	public function __construct(string $url, $handler, string $name = null)
+	public function __construct(string $url, callable $handler, string $name = null)
 	{
 		$this->url = $url;
 		$this->handler = $handler;
@@ -96,14 +96,14 @@ class Route
 			return false;
 		}
 		
-		$response = $this->parseAction($path, $parameters);
+		$response = $this->parseAction($parameters);
 		
 		self::handleResponse($response);
 		
 		return true;
 	}
 	
-	private function parseAction(string $path, array $urlParameters)
+	private function parseAction(array $urlParameters)
 	{
 		if ($this->handler instanceof Closure)
 		{
@@ -112,27 +112,12 @@ class Route
 			
 			return $reflectionClosure->invokeArgs($realParameters);
 		}
-		else if (class_exists($this->handler[0]))
-		{
-			$controller = new $this->handler[0]();
-			$reflectionClass = new ReflectionClass($controller);
-			
-			if (!$reflectionClass->hasMethod($this->handler[1]))
-			{
-				throw new RouteException(
-					'No such method . ' . $this->handler[1] . ' in controller ' . $this->handler[0] . ' for route '
-					. $path
-				);
-			}
-			
-			$method = $reflectionClass->getMethod($this->handler[1]);
-			$realParameters = self::parseRealParameters($method->getParameters(), $urlParameters);
-			
-			return $method->invokeArgs($controller, $realParameters);
-		}
 		else
 		{
-			throw new RouteException('Invalid route handler for ' . $this->url);
+			$reflectionMethod = new \ReflectionMethod($this->handler[0], $this->handler[1]);
+			$realParameters = self::parseRealParameters($reflectionMethod->getParameters(), $urlParameters);
+			
+			return $reflectionMethod->invokeArgs(null, $realParameters);
 		}
 	}
 	
@@ -184,7 +169,7 @@ class Route
 		return $parameters;
 	}
 	
-	private static function generatePattern($parameters)
+	private static function generatePattern(array $parameters)
 	{
 		$pattern = '~\A';
 		
@@ -200,15 +185,11 @@ class Route
 		return $pattern;
 	}
 	
-	/**
-	 * @param ReflectionParameter[] $handlerParameters
-	 * @param string[] $urlParameters
-	 * @return array
-	 */
 	private static function parseRealParameters(array $handlerParameters, array $urlParameters)
 	{
 		$realParameters = [];
 		
+		/** @var ReflectionParameter[] $handlerParameters */
 		// ensure the parameters are passed in in the same order they are declared in the method
 		// also check for optional parameters and custom injections
 		foreach ($handlerParameters as $parameter)

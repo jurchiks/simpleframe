@@ -89,7 +89,7 @@ class Router
 					$name = null;
 				}
 				
-				if (!is_callable($handler, true))
+				if (!is_callable($handler))
 				{
 					throw new RouteException('Invalid route handler for ' . $url . ', must be callable');
 				}
