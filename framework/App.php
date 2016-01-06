@@ -7,7 +7,19 @@ use routing\Router;
 
 final class App
 {
+	/** @var callable[] */
+	private static $exceptionHandlers = [];
 	private static $shutdownHandlers = [];
+	
+	/**
+	 * @param string $exceptionClass : the full name of the exception to handle, e.g.\name\space\Exception::class
+	 * @param callable $handler : the handler to call if an uncaught exception of the specified class has been thrown;
+	 * must return a boolean value - false if handling is to be passed to the framework, true if all work is done in the handler
+	 */
+	public static function registerExceptionHandler(string $exceptionClass, callable $handler)
+	{
+		self::$exceptionHandlers[$exceptionClass] = $handler;
+	}
 	
 	public static function registerShutdownHandler(callable $handler)
 	{
@@ -19,6 +31,16 @@ final class App
 		set_exception_handler(
 			function ($e)
 			{
+				if (isset(self::$exceptionHandlers[get_class($e)]))
+				{
+					$handler = self::$exceptionHandlers[get_class($e)];
+					
+					if ($handler())
+					{
+						return;
+					}
+				}
+				
 				if ($e instanceof RouteNotFoundException)
 				{
 					// exception for a special exception; if a user mistypes a URL, show a 404 not found page.
