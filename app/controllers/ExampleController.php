@@ -9,6 +9,7 @@ class ExampleController extends Controller
 	public function index()
 	{
 		Logger::log(Logger::INFO, 'example log message');
+		
 		return 'index! ' . $this->route('test2', ['id' => 1], ['foo' => 'bar']);
 	}
 	

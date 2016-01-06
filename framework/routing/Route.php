@@ -99,6 +99,7 @@ class Route
 		$response = $this->parseAction($path, $parameters);
 		
 		self::handleResponse($response);
+		
 		return true;
 	}
 	

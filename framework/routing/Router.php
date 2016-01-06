@@ -97,11 +97,14 @@ class Router
 				$routes[$url] = new Route($url, $handler, $name);
 			}
 			
-			usort($routes, function (Route $a, Route $b)
-			{
-				// sort by route length descending
-				return (strlen($b->getUrl()) <=> strlen($a->getUrl()));
-			});
+			usort(
+				$routes,
+				function (Route $a, Route $b)
+				{
+					// sort by route length descending
+					return (strlen($b->getUrl()) <=> strlen($a->getUrl()));
+				}
+			);
 		}
 		
 		return $routes;

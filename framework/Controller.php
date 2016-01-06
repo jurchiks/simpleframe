@@ -1,6 +1,7 @@
 <?php
 use responses\ErrorResponse;
 use responses\TemplateResponse;
+use routing\Router;
 
 abstract class Controller
 {

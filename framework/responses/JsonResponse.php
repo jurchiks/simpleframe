@@ -15,9 +15,7 @@ class JsonResponse extends TextResponse
 	 */
 	public function __construct($content, int $options = 0)
 	{
-		if (is_string($content)
-			|| is_array($content)
-			|| is_object($content))
+		if (is_string($content) || is_array($content) || is_object($content))
 		{
 			$this->content = $content;
 		}

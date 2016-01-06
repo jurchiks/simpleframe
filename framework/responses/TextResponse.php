@@ -12,8 +12,7 @@ class TextResponse implements Response
 	 */
 	public function __construct($content)
 	{
-		if (is_string($content)
-			|| ($content instanceof TextResponse))
+		if (is_string($content) || ($content instanceof TextResponse))
 		{
 			$this->content = $content;
 		}
