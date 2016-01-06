@@ -23,13 +23,28 @@ final class App
 				{
 					// exception for a special exception; if a user mistypes a URL, show a 404 not found page.
 					(new ErrorResponse(new TemplateResponse('page_not_found'), 404))->render();
-				}
-				else
-				{
-					Logger::log(Logger::CRITICAL, strval($e));
 					
-					(new ExceptionResponse($e))->render();
+					return;
 				}
+				
+				if ($e instanceof UnexpectedValueException)
+				{
+					$trace = $e->getTrace();
+					
+					if (isset($trace[0]['class'])
+						&& ($trace[0]['class'] === Monolog\Handler\StreamHandler::class)
+						&& (stripos($e->getMessage(), 'failed to open stream: permission denied') !== false)
+					)
+					{
+						error_log('Cannot write to app log files, please check permissions for ' . LOG_DIR);
+						(new ExceptionResponse($e))->render();
+						
+						return;
+					}
+				}
+				
+				Logger::log(Logger::CRITICAL, strval($e));
+				(new ExceptionResponse($e))->render();
 			}
 		);
 		
@@ -58,7 +73,8 @@ final class App
 				
 				if (isset($logLevels[$errno]) && ($logLevels[$errno] === Logger::NOTICE))
 				{
-					// ignore notice level errors, continue as usual
+					// notice level errors usually don't break code, so we continue;
+					// it has been logged and displayed already anyway
 					return false;
 				}
 				
