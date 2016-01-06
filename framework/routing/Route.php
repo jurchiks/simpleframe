@@ -3,11 +3,10 @@ namespace routing;
 
 use Closure;
 use InvalidArgumentException;
-use ReflectionClass;
 use ReflectionFunction;
 use ReflectionParameter;
 use responses\Response;
-use routing\exceptions\RouteException;
+use routing\exceptions\RouteParameterException;
 use RuntimeException;
 
 class Route
@@ -176,8 +175,7 @@ class Route
 		foreach ($parameters as $parameter)
 		{
 			$pattern .= $parameter['prefix'];
-			$pattern .= '(/(?P<' . $parameter['name'] . '>[^/]+))' //
-				. ($parameter['optional'] ? '?' : '');
+			$pattern .= '(/(?P<' . $parameter['name'] . '>[^/]*))?';
 		}
 		
 		$pattern .= '\z~i';
@@ -187,32 +185,19 @@ class Route
 	
 	private static function parseRealParameters(array $handlerParameters, array $urlParameters)
 	{
+		// ensure the parameters are passed in in the same order they are declared in the method
+		// also check for optional parameters and custom injections
 		$realParameters = [];
 		
 		/** @var ReflectionParameter[] $handlerParameters */
-		// ensure the parameters are passed in in the same order they are declared in the method
-		// also check for optional parameters and custom injections
 		foreach ($handlerParameters as $parameter)
 		{
 			if (isset($urlParameters[$parameter->getName()]))
 			{
-				$value = $urlParameters[$parameter->getName()];
-				
-				if (is_int($value) || is_float($value))
-				{
-					$value = strval($value);
-				}
-				else if (is_bool($value))
-				{
-					$value = ($value ? '1' : '0');
-				}
-				else
-				{
-					// TODO add injections by type
-					throw new InvalidArgumentException('Unsupported parameter type ' . gettype($value));
-				}
-				
-				$realParameters[$parameter->getName()] = $value;
+				$realParameters[$parameter->getName()] = self::tryCastParameter(
+					$parameter,
+					$urlParameters[$parameter->getName()]
+				);
 			}
 			else if ($parameter->isOptional())
 			{
@@ -220,11 +205,61 @@ class Route
 			}
 			else
 			{
-				throw new RouteException('Missing required parameter ' . $parameter->getName());
+				throw new RouteParameterException(
+					'Route missing required parameter ' . $parameter->getName() //
+					. ($parameter->getType() ? ' (' . $parameter->getType()->__toString() . ')' : '')
+				);
 			}
 		}
 		
 		return $realParameters;
+	}
+	
+	private static function tryCastParameter(ReflectionParameter $parameter, string $value)
+	{
+		if (is_null($parameter->getType())) // no explicit type specified, assuming anything is allowed
+		{
+			$type = 'null';
+		}
+		else
+		{
+			$type = $parameter->getType()->__toString();
+		}
+		
+		switch ($type)
+		{
+			case 'null':
+			case 'string':
+				return $value;
+			case 'int':
+				if (is_numeric($value))
+				{
+					return intval($value);
+				}
+				break;
+			case 'float':
+				if (is_numeric($value))
+				{
+					return floatval($value);
+				}
+				break;
+			case 'bool':
+				if (($value === '0') || (strcasecmp($value, 'false') === 0))
+				{
+					return false;
+				}
+				
+				if (($value === '1') || (strcasecmp($value, 'true') === 0))
+				{
+					return true;
+				}
+				break;
+			// TODO DI? custom parameters?
+		}
+		
+		throw new RouteParameterException(
+			'Route parameter ' . $parameter->getName() . ' has invalid value, must be ' . gettype($value)
+		);
 	}
 	
 	private static function handleResponse($response)

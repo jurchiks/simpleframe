@@ -3,18 +3,21 @@ use responses\ErrorResponse;
 use responses\ExceptionResponse;
 use responses\TemplateResponse;
 use routing\exceptions\RouteNotFoundException;
+use routing\exceptions\RouteParameterException;
 use routing\Router;
 
 final class App
 {
 	/** @var callable[] */
 	private static $exceptionHandlers = [];
+	/** @var callable[] */
 	private static $shutdownHandlers = [];
 	
 	/**
 	 * @param string $exceptionClass : the full name of the exception to handle, e.g.\name\space\Exception::class
 	 * @param callable $handler : the handler to call if an uncaught exception of the specified class has been thrown;
-	 * must return a boolean value - false if handling is to be passed to the framework, true if all work is done in the handler
+	 * must return a boolean value - false if handling is to be passed to the framework, true if all work is done in
+	 *     the handler
 	 */
 	public static function registerExceptionHandler(string $exceptionClass, callable $handler)
 	{
@@ -29,7 +32,7 @@ final class App
 	public static function init()
 	{
 		set_exception_handler(
-			function ($e)
+			function (Throwable $e)
 			{
 				if (isset(self::$exceptionHandlers[get_class($e)]))
 				{
@@ -45,6 +48,14 @@ final class App
 				{
 					// exception for a special exception; if a user mistypes a URL, show a 404 not found page.
 					(new ErrorResponse(new TemplateResponse('page_not_found'), 404))->render();
+					
+					return;
+				}
+				
+				if ($e instanceof RouteParameterException)
+				{
+					$data = ['message' => $e->getMessage()];
+					(new ErrorResponse(new TemplateResponse('route_invalid_parameters', $data), 404))->render();
 					
 					return;
 				}
