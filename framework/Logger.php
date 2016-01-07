@@ -40,7 +40,7 @@ class Logger
 			
 			foreach ($appLogger->getLevels() as $name => $level)
 			{
-				$mainHandler = new StreamHandler(LOG_DIR . '/' . strtolower($name) . '.log', $level);
+				$mainHandler = new StreamHandler(LOG_DIR . '/' . strtolower($name) . '.log', $level, true, 0664);
 				
 				$mainHandler->setFormatter($formatter);
 				$appLogger->pushHandler(new FilterHandler($mainHandler, $level, $level));
