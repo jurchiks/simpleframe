@@ -1,4 +1,14 @@
 {
+  "name": "jurchiks/simpleframe",
+  "type": "project",
+  "description": "A light-weight framework with minimal limitations on developer creativity",
+  "keywords": [
+    "framework",
+    "simple",
+    "light",
+    "php7"
+  ],
+  "license": "MIT",
   "require": {
     "php": ">=7.0.0",
     "monolog/monolog": "^1.17"
