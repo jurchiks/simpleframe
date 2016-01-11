@@ -22,11 +22,11 @@ class Logger
 	
 	/**
 	 * @param int $logLevel : one of the Logger constants
-	 * @param string[] $messages : the messages to log
+	 * @param string $message : the message to log
 	 */
-	public static function log(int $logLevel, string ...$messages)
+	public static function log(int $logLevel, string $message)
 	{
-		self::getDefaultLogger()->log($logLevel, implode(PHP_EOL, $messages));
+		self::getDefaultLogger()->log($logLevel, $message);
 	}
 	
 	private static function getDefaultLogger()
