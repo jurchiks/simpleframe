@@ -75,7 +75,7 @@ class Router
 							sprintf(
 								'Invalid route handler name - %s %s, must be string',
 								gettype($handler['name']),
-								strval($handler['name'])
+								var_export($handler['name'], true)
 							)
 						);
 					}

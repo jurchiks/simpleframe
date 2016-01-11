@@ -4,8 +4,10 @@ namespace routing;
 use Closure;
 use InvalidArgumentException;
 use ReflectionFunction;
+use ReflectionMethod;
 use ReflectionParameter;
 use responses\Response;
+use routing\exceptions\RouteException;
 use routing\exceptions\RouteParameterException;
 use RuntimeException;
 
@@ -95,25 +97,25 @@ class Route
 			return false;
 		}
 		
-		$response = $this->parseAction($parameters);
+		$response = self::invokeAction($parameters, $this->handler);
 		
 		self::handleResponse($response);
 		
 		return true;
 	}
 	
-	private function parseAction(array $urlParameters)
+	private static function invokeAction(array $urlParameters, callable $handler)
 	{
-		if ($this->handler instanceof Closure)
+		if ($handler instanceof Closure)
 		{
-			$reflectionClosure = new ReflectionFunction($this->handler);
+			$reflectionClosure = new ReflectionFunction($handler);
 			$realParameters = self::parseRealParameters($reflectionClosure->getParameters(), $urlParameters);
 			
 			return $reflectionClosure->invokeArgs($realParameters);
 		}
 		else
 		{
-			$reflectionMethod = new \ReflectionMethod($this->handler[0], $this->handler[1]);
+			$reflectionMethod = new ReflectionMethod($handler[0], $handler[1]);
 			$realParameters = self::parseRealParameters($reflectionMethod->getParameters(), $urlParameters);
 			
 			return $reflectionMethod->invokeArgs(null, $realParameters);
@@ -217,9 +219,10 @@ class Route
 	
 	private static function tryCastParameter(ReflectionParameter $parameter, string $value)
 	{
-		if (is_null($parameter->getType())) // no explicit type specified, assuming anything is allowed
+		if (is_null($parameter->getType()))
 		{
-			$type = 'null';
+			// no explicit type specified, assuming anything is allowed
+			$type = 'mixed';
 		}
 		else
 		{
@@ -228,7 +231,7 @@ class Route
 		
 		switch ($type)
 		{
-			case 'null':
+			case 'mixed':
 			case 'string':
 				return $value;
 			case 'int':
@@ -255,10 +258,12 @@ class Route
 				}
 				break;
 			// TODO DI? custom parameters?
+			default:
+				throw new RouteException(sprintf('Unsupported parameter type %s', $type));
 		}
 		
 		throw new RouteParameterException(
-			'Route parameter ' . $parameter->getName() . ' has invalid value, must be ' . gettype($value)
+			sprintf('Route parameter %s has invalid value, must be %s', $parameter->getName(), $type)
 		);
 	}
 	
