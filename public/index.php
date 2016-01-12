@@ -12,6 +12,11 @@ if (isset($argv[0]) && ($argv[0] === basename(__FILE__)))
 		echo 'Example: php index.php route /foo/bar', PHP_EOL;
 		exit(1);
 	}
+	
+	if (isset($argv[3], $argv[4]) && ($argv[3] === 'post'))
+	{
+		parse_str($argv[4], $_POST);
+	}
 }
 else
 {
