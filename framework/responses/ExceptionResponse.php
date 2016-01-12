@@ -1,10 +1,17 @@
 <?php
 namespace responses;
 
+use Exception;
+use Throwable;
+
 class ExceptionResponse extends ErrorResponse
 {
-	public function __construct(\Throwable $e)
+	/**
+	 * @param Exception|Throwable $e
+	 */
+	public function __construct($e)
 	{
+		// TODO HHVM support for Throwable required
 		parent::__construct(self::getContent($e));
 	}
 	
@@ -13,8 +20,13 @@ class ExceptionResponse extends ErrorResponse
 		parent::render();
 	}
 	
-	private static function getContent(\Throwable $e)
+	/**
+	 * @param Exception|Throwable $e
+	 * @return string
+	 */
+	private static function getContent($e): string
 	{
+		// TODO HHVM support for Throwable required
 		$class = get_class($e);
 		$trace = [];
 		
@@ -37,7 +49,7 @@ class ExceptionResponse extends ErrorResponse
 CONTENT;
 	}
 	
-	private static function getArgs(array $args)
+	private static function getArgs(array $args): string
 	{
 		$data = [];
 		

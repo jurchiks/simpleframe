@@ -32,7 +32,7 @@ final class App
 	public static function init()
 	{
 		set_exception_handler(
-			function (Throwable $e)
+			function ($e)
 			{
 				if (isset(self::$exceptionHandlers[get_class($e)]))
 				{
@@ -118,23 +118,36 @@ final class App
 		register_shutdown_function(
 			function ()
 			{
+				/**
+				 * @param Exception|Throwable $e
+				 */
+				$log = function ($e)
+				{
+					Logger::log(
+						Logger::CRITICAL,
+						sprintf(
+							"%s thrown in shutdown handler: %s\n%s",
+							get_class($e),
+							$e->getMessage(),
+							$e->getTraceAsString()
+						)
+					);
+				};
+				
 				foreach (self::$shutdownHandlers as $handler)
 				{
 					try
 					{
 						$handler();
 					}
-					catch (Throwable $e)
+					catch (Exception $e)
 					{
-						Logger::log(
-							Logger::CRITICAL,
-							sprintf(
-								"%s thrown in shutdown handler: %s\n%s",
-								get_class($e),
-								$e->getMessage(),
-								$e->getTraceAsString()
-							)
-						);
+						// TODO HHVM support for Throwable required
+						$log($e);
+					}
+					catch (Throwable $t)
+					{
+						$log($t);
 					}
 				}
 			}

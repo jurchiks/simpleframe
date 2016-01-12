@@ -232,21 +232,25 @@ class Route
 		switch ($type)
 		{
 			case 'mixed':
-			case 'string':
+			case 'string': // TODO HHVM support required
+			case 'HH\string':
 				return $value;
-			case 'int':
+			case 'int': // TODO HHVM support required
+			case 'HH\int':
 				if (is_numeric($value))
 				{
 					return intval($value);
 				}
 				break;
-			case 'float':
+			case 'float': // TODO HHVM support required
+			case 'HH\float':
 				if (is_numeric($value))
 				{
 					return floatval($value);
 				}
 				break;
-			case 'bool':
+			case 'bool': // TODO HHVM support required
+			case 'HH\bool':
 				if (($value === '0') || (strcasecmp($value, 'false') === 0))
 				{
 					return false;
