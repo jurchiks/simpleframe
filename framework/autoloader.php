@@ -28,10 +28,20 @@ if (file_exists(ROOT_DIR . '/vendor/autoload.php'))
 	require ROOT_DIR . '/vendor/autoload.php';
 }
 
-// user 
+// user initializers, event bindings, etc
 if (file_exists(ROOT_DIR . '/app/bootstrap.php'))
 {
 	require ROOT_DIR . '/app/bootstrap.php';
+}
+
+// routes
+if (file_exists(ROOT_DIR . '/app/routes.php'))
+{
+	require ROOT_DIR . '/app/routes.php';
+}
+else
+{
+	throw new RuntimeException('No routes defined, what do you expect to see here?');
 }
 
 $timezone = Config::get('timezone');
