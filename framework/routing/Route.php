@@ -47,29 +47,35 @@ class Route
 		return $this->name;
 	}
 	
-	public function generateLink(array $parameters = [])
+	public function generateLink(array $userParameters = [])
 	{
 		$url = $this->url;
 		
-		foreach ($this->parameters as $name => $parameter)
+		foreach ($this->getFullParameters() as $name => $parameter)
 		{
-			if (isset($parameters[$name]))
+			$pattern = '~\/:' . $name . '\b~';
+			
+			if (isset($userParameters[$name]))
 			{
-				// TODO validate parameter type
 				// parameter is provided; validate and replace
-				if ($parameters[$name] === false)
+				if ($parameter['type'] !== self::getVariableType($userParameters[$name]))
 				{
 					throw new InvalidArgumentException(
-						'Route parameter "' . $name . '" does not match the required type'
+						sprintf(
+							'Route "%s" parameter "%s" does not match the required type "%s"',
+							$this->name,
+							$name,
+							$parameter['type']
+						)
 					);
 				}
 				
-				$url = str_replace($parameter['full'], strval($parameters[$name]), $url);
+				$url = preg_replace($pattern, '/' . strval($userParameters[$name]), $url, 1);
 			}
 			else if ($parameter['optional'])
 			{
 				// parameter is not provided, but is optional; remove from URL
-				$url = str_replace('/' . $parameter['full'], '', $url);
+				$url = preg_replace($pattern, '', $url, 1);
 			}
 			else
 			{
@@ -97,28 +103,80 @@ class Route
 			return false;
 		}
 		
-		$response = self::invokeAction($parameters, $this->handler);
+		$response = self::invokeAction($parameters, $this->getReflectedHandler());
 		
 		self::handleResponse($response);
 		
 		return true;
 	}
 	
-	private static function invokeAction(array $urlParameters, callable $handler)
+	/**
+	 * @return ReflectionFunction|ReflectionMethod
+	 */
+	private function getReflectedHandler()
 	{
-		if ($handler instanceof Closure)
+		static $refHandlers = [];
+		
+		if (empty($refHandlers[$this->url]))
 		{
-			$reflectionClosure = new ReflectionFunction($handler);
-			$realParameters = self::parseRealParameters($reflectionClosure->getParameters(), $urlParameters);
+			if ($this->handler instanceof Closure)
+			{
+				$refHandler = new ReflectionFunction($this->handler);
+			}
+			else
+			{
+				$refHandler = new ReflectionMethod($this->handler[0], $this->handler[1]);
+			}
 			
-			return $reflectionClosure->invokeArgs($realParameters);
+			$refHandlers[$this->url] = $refHandler;
+		}
+		
+		return $refHandlers[$this->url];
+	}
+	
+	private function getFullParameters()
+	{
+		static $processed = [];
+		
+		if (empty($processed[$this->url]))
+		{
+			$refParameters = $this->getReflectedHandler()->getParameters();
+			
+			foreach ($refParameters as $refParameter)
+			{
+				$name = $refParameter->getName();
+				
+				if (!isset($this->parameters[$name]))
+				{
+					throw new RouteException('Route definition missing handler parameter ' . $name);
+				}
+				
+				$this->parameters[$name]['optional'] = $refParameter->isOptional();
+				$this->parameters[$name]['type'] = self::getParameterType($refParameter);
+			}
+			
+			$processed[$this->url] = true;
+		}
+		
+		return $this->parameters;
+	}
+	
+	/**
+	 * @param array $urlParameters
+	 * @param ReflectionFunction|ReflectionMethod $refHandler
+	 * @return mixed
+	 */
+	private static function invokeAction(array $urlParameters, $refHandler)
+	{
+		$realParameters = self::parseRealParameters($refHandler->getParameters(), $urlParameters);
+		
+		if ($refHandler instanceof ReflectionFunction)
+		{
+			return $refHandler->invokeArgs($realParameters);
 		}
 		else
 		{
-			$reflectionMethod = new ReflectionMethod($handler[0], $handler[1]);
-			$realParameters = self::parseRealParameters($reflectionMethod->getParameters(), $urlParameters);
-			
-			return $reflectionMethod->invokeArgs(null, $realParameters);
+			return $refHandler->invokeArgs(null, $realParameters);
 		}
 	}
 	
@@ -141,19 +199,9 @@ class Route
 			}
 			
 			$name = substr($url, $start + 1, $length);
-			$full = ':' . $name;
-			$isOptional = false;
-			
-			if (substr($name, -1) === '?')
-			{
-				$isOptional = true;
-				$name = substr($name, 0, -1);
-			}
 			
 			$parameters[$name] = [
-				'prefix'   => substr($url, $offset, $start - $offset - 1),
-				'optional' => $isOptional,
-				'full'     => $full,
+				'prefix' => substr($url, $offset, $start - $offset - 1),
 			];
 			
 			if ($end === false)
@@ -207,8 +255,8 @@ class Route
 			else
 			{
 				throw new RouteParameterException(
-					'Route missing required parameter ' . $parameter->getName() //
-					. ($parameter->getType() ? ' (' . $parameter->getType()->__toString() . ')' : '')
+					'Route missing required parameter "' . $parameter->getName() . '"' //
+					. ($parameter->hasType() ? ' (' . self::getParameterType($parameter) . ')' : '')
 				);
 			}
 		}
@@ -254,7 +302,7 @@ class Route
 		}
 		
 		throw new RouteParameterException(
-			sprintf('Route parameter %s has invalid value, must be %s', $parameter->getName(), $type)
+			sprintf('Route parameter "%s" has an invalid value, must be %s', $parameter->getName(), $type)
 		);
 	}
 	
@@ -268,7 +316,7 @@ class Route
 			'HH\string' => 'string',
 		];
 		
-		if (is_null($parameter->getType()))
+		if (!$parameter->hasType())
 		{
 			// no explicit type specified, assuming anything is allowed
 			return 'mixed';
