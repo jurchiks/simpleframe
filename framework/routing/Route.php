@@ -51,20 +51,20 @@ class Route
 	{
 		$url = $this->url;
 		
-		foreach ($this->parameters as $parameter)
+		foreach ($this->parameters as $name => $parameter)
 		{
-			if (isset($parameters[$parameter['name']]))
+			if (isset($parameters[$name]))
 			{
 				// TODO validate parameter type
 				// parameter is provided; validate and replace
-				if ($parameters[$parameter['name']] === false)
+				if ($parameters[$name] === false)
 				{
 					throw new InvalidArgumentException(
-						'Route parameter "' . $parameter['name'] . '" does not match the required type'
+						'Route parameter "' . $name . '" does not match the required type'
 					);
 				}
 				
-				$url = str_replace($parameter['full'], strval($parameters[$parameter['name']]), $url);
+				$url = str_replace($parameter['full'], strval($parameters[$name]), $url);
 			}
 			else if ($parameter['optional'])
 			{
@@ -74,7 +74,7 @@ class Route
 			else
 			{
 				// parameter is not optional and not provided
-				throw new InvalidArgumentException('Missing required route parameter "' . $parameter['name'] . '"');
+				throw new InvalidArgumentException('Missing required route parameter "' . $name . '"');
 			}
 		}
 		
@@ -150,9 +150,8 @@ class Route
 				$name = substr($name, 0, -1);
 			}
 			
-			$parameters[] = [
+			$parameters[$name] = [
 				'prefix'   => substr($url, $offset, $start - $offset - 1),
-				'name'     => $name,
 				'optional' => $isOptional,
 				'full'     => $full,
 			];
@@ -174,10 +173,10 @@ class Route
 	{
 		$pattern = '~\A';
 		
-		foreach ($parameters as $parameter)
+		foreach ($parameters as $name => $parameter)
 		{
 			$pattern .= $parameter['prefix'];
-			$pattern .= '(/(?P<' . $parameter['name'] . '>[^/]*))?';
+			$pattern .= '(/(?P<' . $name . '>[^/]*))?';
 		}
 		
 		$pattern .= '\z~i';
@@ -219,38 +218,26 @@ class Route
 	
 	private static function tryCastParameter(ReflectionParameter $parameter, string $value)
 	{
-		if (is_null($parameter->getType()))
-		{
-			// no explicit type specified, assuming anything is allowed
-			$type = 'mixed';
-		}
-		else
-		{
-			$type = $parameter->getType()->__toString();
-		}
+		$type = self::getParameterType($parameter);
 		
 		switch ($type)
 		{
 			case 'mixed':
-			case 'string': // TODO HHVM support required
-			case 'HH\string':
+			case 'string':
 				return $value;
-			case 'int': // TODO HHVM support required
-			case 'HH\int':
+			case 'int':
 				if (is_numeric($value))
 				{
 					return intval($value);
 				}
 				break;
-			case 'float': // TODO HHVM support required
-			case 'HH\float':
+			case 'float':
 				if (is_numeric($value))
 				{
 					return floatval($value);
 				}
 				break;
-			case 'bool': // TODO HHVM support required
-			case 'HH\bool':
+			case 'bool':
 				if (($value === '0') || (strcasecmp($value, 'false') === 0))
 				{
 					return false;
@@ -269,6 +256,40 @@ class Route
 		throw new RouteParameterException(
 			sprintf('Route parameter %s has invalid value, must be %s', $parameter->getName(), $type)
 		);
+	}
+	
+	private static function getParameterType(ReflectionParameter $parameter)
+	{
+		// TODO HHVM support for PHP7 scalars required
+		static $map = [
+			'HH\int'    => 'int',
+			'HH\float'  => 'float',
+			'HH\bool'   => 'bool',
+			'HH\string' => 'string',
+		];
+		
+		if (is_null($parameter->getType()))
+		{
+			// no explicit type specified, assuming anything is allowed
+			return 'mixed';
+		}
+		
+		$type = $parameter->getType()->__toString();
+		
+		return ($map[$type] ?? $type);
+	}
+	
+	private static function getVariableType($variable)
+	{
+		static $map = [
+			'integer' => 'int',
+			'boolean' => 'bool',
+			'double'  => 'float',
+		];
+		
+		$type = gettype($variable);
+		
+		return ($map[$type] ?? $type);
 	}
 	
 	private static function handleResponse($response)
