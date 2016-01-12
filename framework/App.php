@@ -47,14 +47,14 @@ final class App
 				if ($e instanceof RouteNotFoundException)
 				{
 					// exception for a special exception; if a user mistypes a URL, show a 404 not found page.
-					(new ErrorResponse(new TemplateResponse('page_not_found'), 404))->render();
+					(new ErrorResponse(new TemplateResponse('page_not_found', ['exception' => $e]), 404))->render();
 					
 					return;
 				}
 				
 				if ($e instanceof RouteParameterException)
 				{
-					$data = ['message' => $e->getMessage()];
+					$data = ['exception' => $e];
 					(new ErrorResponse(new TemplateResponse('route_invalid_parameters', $data), 404))->render();
 					
 					return;
