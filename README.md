@@ -16,3 +16,9 @@ going to the `/public` directory, and executing the following command:
 
 For POST requests, you can add parameters to the command:
 `php index.php route /my/route post name=foo&bar[0]=baz`
+
+## Installation
+
+This project is available via composer:
+
+`composer create-project jurchiks/simpleframe your-project-name`
