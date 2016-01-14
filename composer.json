@@ -12,5 +12,10 @@
   "require": {
     "php": ">=7.0.0",
     "monolog/monolog": "^1.17"
+  },
+  "scripts": {
+    "post-create-project-cmd": [
+      "php -r \"chmod('logs', 0666);\""
+    ]
   }
 }
