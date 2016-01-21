@@ -46,12 +46,9 @@ class Router
 	 */
 	public static function link(string $name, array $parameters = [])
 	{
-		foreach (self::$routes as $route)
+		if (isset(self::$routes[$name]))
 		{
-			if ($route->getName() === $name)
-			{
-				return $route->generateLink($parameters);
-			}
+			return self::$routes[$name]->generateLink($parameters);
 		}
 		
 		return null;
