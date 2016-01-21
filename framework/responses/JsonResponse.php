@@ -15,13 +15,18 @@ class JsonResponse extends TextResponse
 	 */
 	public function __construct($content, int $options = 0)
 	{
-		if (is_string($content) || is_array($content) || is_object($content))
+		if (is_string($content) || is_array($content))
 		{
 			$this->content = $content;
 		}
-		else if ($content instanceof JsonSerializable)
+		else if (is_object($content))
 		{
-			$this->content = $content->jsonSerialize();
+			if ($content instanceof JsonSerializable)
+			{
+				$content = $content->jsonSerialize();
+			}
+			
+			$this->content = $content;
 		}
 		else
 		{
