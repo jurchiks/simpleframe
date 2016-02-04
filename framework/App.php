@@ -154,16 +154,60 @@ final class App
 		);
 	}
 	
-	public static function render(string $url)
+	public static function render()
 	{
-		$path = parse_url($url, PHP_URL_PATH);
-		$path = rtrim($path, '/');
+		$methods = ['get', 'post', 'put', 'delete', 'head', 'options'];
+		$argv = $GLOBALS['argv'];
+		$data = [];
 		
-		if (empty($path))
+		if (isset($argv[0]))
 		{
-			$path = '/';
+			if (!isset($argv[1], $argv[2]) || !in_array($argv[1], $methods))
+			{
+				echo 'Examples:', PHP_EOL, //
+					"\tphp index.php method path[ data]", PHP_EOL, //
+					"\tphp index.php get /foo", PHP_EOL, //
+					"\tphp index.php get /foo/bar a=1&b=2", PHP_EOL, //
+					"\tphp index.php post /foo/bar a=1&b=2", PHP_EOL, //
+					"\tphp index.php delete /foo/bar a=1&b=2", PHP_EOL;
+				exit(1);
+			}
+			
+			$method = $argv[1];
+			$route = $argv[2];
+			
+			if (isset($argv[3]))
+			{
+				parse_str($argv[3], $data);
+			}
+		}
+		else
+		{
+			$method = strtolower($_SERVER['REQUEST_METHOD']);
+			$route = $_SERVER['REQUEST_URI'];
+			
+			if (!in_array($method, $methods))
+			{
+				throw new RuntimeException('Unsupported request method ' . $method);
+			}
+			
+			if ($method === 'get')
+			{
+				$data = $_GET;
+			}
+			else if ($method === 'post')
+			{
+				$data = $_POST;
+			}
+			else
+			{
+				// PHP does not automatically populate $_PUT and $_DELETE variables
+				parse_str(file_get_contents('php://input'), $data);
+			}
 		}
 		
-		Router::render($path);
+		$request = new Request($method, $route, $data);
+		
+		Router::render($request);
 	}
 }

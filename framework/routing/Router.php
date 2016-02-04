@@ -2,6 +2,7 @@
 namespace routing;
 
 use InvalidArgumentException;
+use Request;
 use routing\exceptions\RouteNotFoundException;
 
 class Router
@@ -9,13 +10,13 @@ class Router
 	/** @var Route[] */
 	private static $routes = [];
 	
-	public static function addRoute(string $name, string $url, callable $handler)
+	public static function addRoute(string $name, string $url, callable $handler, array $methods = [])
 	{
 		// using name as key only to prevent multiple routes with the same name
-		self::$routes[$name] = new Route($url, $handler, $name);
+		self::$routes[$name] = new Route($url, $handler, $name, $methods);
 	}
 	
-	public static function render(string $path)
+	public static function render(Request $request)
 	{
 		// sort routes only when rendering instead of on every route addition
 		uasort(
@@ -29,7 +30,7 @@ class Router
 		
 		foreach (self::$routes as $route)
 		{
-			if ($route->render($path))
+			if ($route->render($request))
 			{
 				return;
 			}

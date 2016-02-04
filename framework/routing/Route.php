@@ -6,6 +6,7 @@ use InvalidArgumentException;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionParameter;
+use Request;
 use responses\Response;
 use routing\exceptions\RouteException;
 use routing\exceptions\RouteParameterException;
@@ -19,16 +20,40 @@ class Route
 	private $handler;
 	/** @var string */
 	private $name;
+	/** @var string[] */
+	private $methods;
 	/** @var array[] */
 	private $parameters = [];
 	/** @var string */
 	private $pattern = '';
 	
-	public function __construct(string $url, callable $handler, string $name = null)
+	private static $injectedParameters = [
+		Request::class,
+	];
+	private static $allMethods = ['get', 'post', 'put', 'delete', 'head', 'options'];
+	
+	public function __construct(string $url, callable $handler, string $name, array $methods)
 	{
 		$this->url = $url;
 		$this->handler = $handler;
 		$this->name = $name;
+		
+		if (empty($methods))
+		{
+			$this->methods = self::$allMethods;
+		}
+		else
+		{
+			foreach ($methods as $method)
+			{
+				if (!in_array($method, self::$allMethods))
+				{
+					throw new RouteException('Unsupported method "' . $method . '"');
+				}
+			}
+			
+			$this->methods = $methods;
+		}
 		
 		if (strpos($url, ':') !== false)
 		{
@@ -87,23 +112,28 @@ class Route
 		return $url;
 	}
 	
-	public function render(string $path)
+	public function render(Request $request)
 	{
+		if (!in_array($request->getMethod(), $this->methods))
+		{
+			return false;
+		}
+		
 		if (empty($this->parameters))
 		{
-			if ($this->url !== $path)
+			if ($this->url !== $request->getPath())
 			{
 				return false;
 			}
 			
 			$parameters = [];
 		}
-		else if (preg_match($this->pattern, $path, $parameters) !== 1)
+		else if (preg_match($this->pattern, $request->getPath(), $parameters) !== 1)
 		{
 			return false;
 		}
 		
-		$response = self::invokeAction($parameters, $this->getReflectedHandler());
+		$response = self::invokeAction($this->getReflectedHandler(), $parameters, $request);
 		
 		self::handleResponse($response);
 		
@@ -144,11 +174,20 @@ class Route
 			
 			foreach ($refParameters as $refParameter)
 			{
+				if (is_object($refParameter->getClass()))
+				{
+					if (in_array($refParameter->getClass()->getName(), self::$injectedParameters))
+					{
+						// skip injected parameters
+						continue;
+					}
+				}
+				
 				$name = $refParameter->getName();
 				
 				if (!isset($this->parameters[$name]))
 				{
-					throw new RouteException('Route definition missing handler parameter ' . $name);
+					throw new RouteException('Route definition missing handler parameter "' . $name . '"');
 				}
 				
 				$this->parameters[$name]['optional'] = $refParameter->isOptional();
@@ -162,13 +201,14 @@ class Route
 	}
 	
 	/**
-	 * @param array $urlParameters
 	 * @param ReflectionFunction|ReflectionMethod $refHandler
+	 * @param array $urlParameters
+	 * @param Request $request
 	 * @return mixed
 	 */
-	private static function invokeAction(array $urlParameters, $refHandler)
+	private static function invokeAction($refHandler, array $urlParameters, Request $request)
 	{
-		$realParameters = self::parseRealParameters($refHandler->getParameters(), $urlParameters);
+		$realParameters = self::parseRealParameters($refHandler->getParameters(), $urlParameters, $request);
 		
 		if ($refHandler instanceof ReflectionFunction)
 		{
@@ -232,7 +272,7 @@ class Route
 		return $pattern;
 	}
 	
-	private static function parseRealParameters(array $handlerParameters, array $urlParameters)
+	private static function parseRealParameters(array $handlerParameters, array $urlParameters, Request $request)
 	{
 		// ensure the parameters are passed in in the same order they are declared in the method
 		// also check for optional parameters and custom injections
@@ -241,7 +281,20 @@ class Route
 		/** @var ReflectionParameter[] $handlerParameters */
 		foreach ($handlerParameters as $parameter)
 		{
-			if (isset($urlParameters[$parameter->getName()]))
+			$class = $parameter->getClass();
+			
+			if (is_object($class)) // framework DI
+			{
+				switch ($class->getName())
+				{
+					case Request::class:
+						$realParameters[$parameter->getName()] = $request;
+						break;
+					default:
+						throw new RouteParameterException('Unsupported parameter ' . $class->getName());
+				}
+			}
+			else if (isset($urlParameters[$parameter->getName()]))
 			{
 				$realParameters[$parameter->getName()] = self::tryCastParameter(
 					$parameter,

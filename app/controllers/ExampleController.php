@@ -3,14 +3,21 @@ namespace controllers;
 
 use Controller;
 use Logger;
+use Request;
+use responses\JsonResponse;
 
 class ExampleController extends Controller
 {
-	public static function index()
+	public static function index(Request $request)
 	{
 		Logger::log(Logger::INFO, 'example log message');
 		
-		return 'index! ' . self::route('test2', ['id' => 1], ['foo' => 'bar']);
+		return 'route: ' . $request->getPath() . ', next up: ' . self::route('example.test2', ['id' => 1], ['foo' => 'bar']);
+	}
+	
+	public static function put(Request $request)
+	{
+		return new JsonResponse($request->getData());
 	}
 	
 	public static function test()
