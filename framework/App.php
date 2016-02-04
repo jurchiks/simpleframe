@@ -157,7 +157,7 @@ final class App
 	public static function render()
 	{
 		$methods = ['get', 'post', 'put', 'delete', 'head', 'options'];
-		$argv = $GLOBALS['argv'];
+		$argv = ($GLOBALS['argv'] ?? []);
 		$data = [];
 		
 		if (isset($argv[0]))
