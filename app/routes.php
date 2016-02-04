@@ -1,4 +1,5 @@
 <?php
+use classes\User;
 use routing\Router;
 use controllers\ExampleController;
 
@@ -6,10 +7,10 @@ use controllers\ExampleController;
 // This is to be sure that we correctly check the types and cast the values of the parameters.
 Router::addRoute(
 	'index',
-	'/:name',
-	function (string $name = null)
+	'/:user',
+	function (User $user = null)
 	{
-		return 'Hello, ' . ($name ?: 'World') . '!';
+		return 'Hello, ' . ($user ? $user->getName() : 'World') . '!';
 	}
 );
 // route names have no strict scheme; anything (reasonable) will work

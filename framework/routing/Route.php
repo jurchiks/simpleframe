@@ -283,7 +283,7 @@ class Route
 		{
 			$class = $parameter->getClass();
 			
-			if (is_object($class)) // framework DI
+			if (is_object($class) && !$class->implementsInterface(Parameter::class)) // framework DI
 			{
 				switch ($class->getName())
 				{
@@ -349,8 +349,26 @@ class Route
 					return true;
 				}
 				break;
-			// TODO DI? custom parameters?
 			default:
+				$class = $parameter->getClass();
+				
+				if (($class !== null) && $class->implementsInterface(Parameter::class))
+				{
+					try
+					{
+						return $class->newInstance($value);
+					}
+					catch (RouteParameterException $e)
+					{
+						if ($parameter->isOptional())
+						{
+							return $parameter->getDefaultValue();
+						}
+						
+						throw $e;
+					}
+				}
+				
 				throw new RouteException(sprintf('Unsupported parameter type %s', $type));
 		}
 		
