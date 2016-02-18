@@ -24,6 +24,11 @@ class User implements Parameter
 		$this->name = self::$users[$this->id];
 	}
 	
+	public function __toString(): string
+	{
+		return strval($this->id);
+	}
+	
 	public function getId(): int
 	{
 		return $this->id;

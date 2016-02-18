@@ -417,6 +417,11 @@ class Route
 		
 		$type = gettype($variable);
 		
+		if ($type === 'object')
+		{
+			$type = get_class($variable);
+		}
+		
 		return ($map[$type] ?? $type);
 	}
 	

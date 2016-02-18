@@ -1,6 +1,7 @@
 <?php
 namespace controllers;
 
+use classes\User;
 use Controller;
 use Logger;
 use Request;
@@ -12,7 +13,7 @@ class ExampleController extends Controller
 	{
 		Logger::log(Logger::INFO, 'example log message');
 		
-		return 'route: ' . $request->getPath() . ', next up: ' . self::route('example.test2', ['id' => 1], ['foo' => 'bar']);
+		return 'route: ' . $request->getPath() . ', next up: ' . self::route('example.test2', ['user' => new User(1)], ['foo' => 'bar']);
 	}
 	
 	public static function put(Request $request)
@@ -25,8 +26,8 @@ class ExampleController extends Controller
 		return self::error(self::template('example', ['hello' => 'world']), 503);
 	}
 	
-	public static function test2(int $id, int $id2 = null)
+	public static function test2(User $user, int $id2 = null)
 	{
-		return $id . ':' . $id2;
+		return $user . ':' . $id2;
 	}
 }
