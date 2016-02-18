@@ -2,6 +2,7 @@
 namespace routing;
 
 use Closure;
+use Exception;
 use InvalidArgumentException;
 use ReflectionFunction;
 use ReflectionMethod;
@@ -281,40 +282,67 @@ class Route
 		/** @var ReflectionParameter[] $handlerParameters */
 		foreach ($handlerParameters as $parameter)
 		{
-			$class = $parameter->getClass();
+			$value = ($urlParameters[$parameter->getName()] ?? null);
 			
-			if (is_object($class) && !$class->implementsInterface(Parameter::class)) // framework DI
+			if (is_object($parameter->getClass()))
 			{
-				switch ($class->getName())
-				{
-					case Request::class:
-						$realParameters[$parameter->getName()] = $request;
-						break;
-					default:
-						throw new RouteParameterException('Unsupported parameter ' . $class->getName());
-				}
-			}
-			else if (isset($urlParameters[$parameter->getName()]))
-			{
-				$realParameters[$parameter->getName()] = self::tryCastParameter(
-					$parameter,
-					$urlParameters[$parameter->getName()]
-				);
-			}
-			else if ($parameter->isOptional())
-			{
-				$realParameters[$parameter->getName()] = $parameter->getDefaultValue();
+				$realParameters[$parameter->getName()] = self::parseParameterInjection($parameter, $value ?: '', $request);
 			}
 			else
 			{
-				throw new RouteParameterException(
-					'Route missing required parameter "' . $parameter->getName() . '"' //
-					. ($parameter->hasType() ? ' (' . self::getParameterType($parameter) . ')' : '')
-				);
+				$realParameters[$parameter->getName()] = self::parseParameterValue($parameter, $value);
 			}
 		}
 		
 		return $realParameters;
+	}
+	
+	private static function parseParameterInjection(ReflectionParameter $parameter, string $value, Request $request)
+	{
+		$class = $parameter->getClass();
+		
+		switch ($class->getName())
+		{
+			case Request::class:
+				return $request;
+			default:
+				if ($class->implementsInterface(Parameter::class))
+				{
+					try
+					{
+						return $class->newInstance($value);
+					}
+					catch (Exception $e)
+					{
+						if ($parameter->isOptional())
+						{
+							return $parameter->getDefaultValue();
+						}
+						
+						throw $e;
+					}
+				}
+		}
+		
+		throw new RouteParameterException('Unsupported parameter "' . $class->getName() . '"');
+	}
+	
+	private static function parseParameterValue(ReflectionParameter $parameter, string $value = null)
+	{
+		if ($value !== null)
+		{
+			return self::tryCastParameter($parameter, $value);
+		}
+		
+		if ($parameter->isOptional())
+		{
+			return $parameter->getDefaultValue();
+		}
+		
+		throw new RouteParameterException(
+			'Route missing required parameter "' . $parameter->getName() . '"' //
+			. ($parameter->hasType() ? ' (' . self::getParameterType($parameter) . ')' : '')
+		);
 	}
 	
 	private static function tryCastParameter(ReflectionParameter $parameter, string $value)
@@ -350,25 +378,6 @@ class Route
 				}
 				break;
 			default:
-				$class = $parameter->getClass();
-				
-				if (($class !== null) && $class->implementsInterface(Parameter::class))
-				{
-					try
-					{
-						return $class->newInstance($value);
-					}
-					catch (RouteParameterException $e)
-					{
-						if ($parameter->isOptional())
-						{
-							return $parameter->getDefaultValue();
-						}
-						
-						throw $e;
-					}
-				}
-				
 				throw new RouteException(sprintf('Unsupported parameter type %s', $type));
 		}
 		
