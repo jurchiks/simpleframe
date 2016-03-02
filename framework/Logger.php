@@ -1,24 +1,15 @@
 <?php
-use Monolog\Formatter\LineFormatter;
-use Monolog\Handler\FilterHandler;
-use Monolog\Handler\StreamHandler;
-use Monolog\Logger as MonoLogger;
+use js\tools\commons\logging\FileLogger;
 
 class Logger
 {
-	const DEBUG = MonoLogger::DEBUG;
-	const INFO = MonoLogger::INFO;
-	const NOTICE = MonoLogger::NOTICE;
-	const WARNING = MonoLogger::WARNING;
-	const ERROR = MonoLogger::ERROR;
-	const CRITICAL = MonoLogger::CRITICAL;
-	const ALERT = MonoLogger::ALERT;
-	const EMERGENCY = MonoLogger::EMERGENCY;
-	
-	public static function make($name)
-	{
-		return new MonoLogger($name);
-	}
+	const DEBUG = FileLogger::DEBUG;
+	const INFO = FileLogger::INFO;
+	const NOTICE = FileLogger::NOTICE;
+	const WARNING = FileLogger::WARNING;
+	const ERROR = FileLogger::ERROR;
+	const CRITICAL = FileLogger::CRITICAL;
+	const FATAL = FileLogger::FATAL;
 	
 	/**
 	 * @param int $logLevel : one of the Logger constants
@@ -35,16 +26,7 @@ class Logger
 		
 		if (is_null($appLogger))
 		{
-			$appLogger = new MonoLogger(Config::get('app.name'));
-			$formatter = new LineFormatter("[%datetime%] %message%\n", null, true); // allow newlines
-			
-			foreach ($appLogger->getLevels() as $name => $level)
-			{
-				$mainHandler = new StreamHandler(LOG_DIR . '/' . strtolower($name) . '.log', $level, true, 0664);
-				
-				$mainHandler->setFormatter($formatter);
-				$appLogger->pushHandler(new FilterHandler($mainHandler, $level, $level));
-			}
+			$appLogger = new FileLogger(LOG_DIR);
 		}
 		
 		return $appLogger;

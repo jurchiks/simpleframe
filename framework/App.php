@@ -1,4 +1,5 @@
 <?php
+use js\tools\commons\exceptions\LogException;
 use responses\ErrorResponse;
 use responses\ExceptionResponse;
 use responses\TemplateResponse;
@@ -65,8 +66,8 @@ final class App
 					$trace = $e->getTrace();
 					
 					if (isset($trace[0]['class'])
-						&& ($trace[0]['class'] === Monolog\Handler\StreamHandler::class)
-						&& (stripos($e->getMessage(), 'failed to open stream: permission denied') !== false)
+						&& ($trace[0]['class'] === LogException::class)
+						&& (stripos($e->getMessage(), 'check permissions') !== false)
 					)
 					{
 						error_log('Cannot write to app log files, please check permissions for ' . LOG_DIR);
