@@ -10,12 +10,14 @@ just show a `404 page not found`.
 
 ## Testing
 
-You can test any page that responds to GET requests by opening a terminal,
-going to the `/public` directory, and executing the following command:
-`php index.php route /my/route`.
+You can test almost any page (the exception being file uploads) by opening
+a terminal, going to the `/public` directory, and executing
+`php index.php METHOD ROUTE[ DATA]`, e.g. `php index.php get /`
+or `php index.php post /abc foo=bar&bar[0]=baz`.
 
-For POST requests, you can add parameters to the command:
-`php index.php route /my/route post name=foo&bar[0]=baz`
+At the time of writing this, the framework only relies on two $_SERVER variables,
+namely `REQUEST_METHOD` and `REQUEST_URI`, both of which are easy to simulate
+in a terminal.
 
 ## Installation
 

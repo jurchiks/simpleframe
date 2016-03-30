@@ -9,6 +9,8 @@ use routing\Router;
 
 final class App
 {
+	const REQUEST_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'];
+	
 	/** @var callable[] */
 	private static $exceptionHandlers = [];
 	/** @var callable[] */
@@ -157,13 +159,12 @@ final class App
 	
 	public static function render()
 	{
-		$methods = ['get', 'post', 'put', 'delete', 'head', 'options'];
 		$argv = ($GLOBALS['argv'] ?? []);
 		$data = [];
 		
 		if (isset($argv[0]))
 		{
-			if (!isset($argv[1], $argv[2]) || !in_array($argv[1], $methods))
+			if (!isset($argv[1], $argv[2]) || !in_array($argv[1], self::REQUEST_METHODS))
 			{
 				echo 'Examples:', PHP_EOL, //
 					"\tphp index.php method path[ data]", PHP_EOL, //
@@ -187,7 +188,7 @@ final class App
 			$method = strtolower($_SERVER['REQUEST_METHOD']);
 			$route = $_SERVER['REQUEST_URI'];
 			
-			if (!in_array($method, $methods))
+			if (!in_array($method, self::REQUEST_METHODS))
 			{
 				throw new RuntimeException('Unsupported request method ' . $method);
 			}

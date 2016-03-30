@@ -1,6 +1,7 @@
 <?php
 namespace routing;
 
+use App;
 use Closure;
 use Exception;
 use InvalidArgumentException;
@@ -31,7 +32,6 @@ class Route
 	private static $injectedParameters = [
 		Request::class,
 	];
-	private static $allMethods = ['get', 'post', 'put', 'delete', 'head', 'options'];
 	
 	public function __construct(string $url, callable $handler, string $name, array $methods)
 	{
@@ -41,13 +41,13 @@ class Route
 		
 		if (empty($methods))
 		{
-			$this->methods = self::$allMethods;
+			$this->methods = App::REQUEST_METHODS;
 		}
 		else
 		{
 			foreach ($methods as $method)
 			{
-				if (!in_array($method, self::$allMethods))
+				if (!in_array($method, App::REQUEST_METHODS))
 				{
 					throw new RouteException('Unsupported method "' . $method . '"');
 				}
