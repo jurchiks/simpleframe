@@ -63,6 +63,10 @@ CONTENT;
 			{
 				$data[] = '[' . self::getArgs($arg) . ']';
 			}
+			else if (is_string($arg))
+			{
+				$data[] = '"' . $arg . '"';
+			}
 			else
 			{
 				$data[] = print_r($arg, true);
