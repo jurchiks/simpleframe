@@ -9,12 +9,7 @@ class Request
 	public function __construct(string $method, string $route, array $data)
 	{
 		$path = parse_url($route, PHP_URL_PATH);
-		$path = rtrim($path, '/');
-		
-		if (empty($path))
-		{
-			$path = '/';
-		}
+		$path = rtrim($path, '/') ?: '/';
 		
 		$this->method = $method;
 		$this->path = $path;
