@@ -23,20 +23,16 @@ class ExceptionResponse extends ErrorResponse
 	private static function makeContent($e): string
 	{
 		/** @var Exception|Throwable $e */
-		$class = get_class($e);
-		$lines = [
-			"{$class} in {$e->getFile()} on line {$e->getLine()}:",
-			$e->getMessage(),
-			self::makeTrace($e),
-		];
+		$message = get_class($e) . ": {$e->getMessage()} - in {$e->getFile()} on line {$e->getLine()}";
+		$trace = self::makeTrace($e);
 		
 		if (PHP_SAPI === 'cli')
 		{
-			return implode(PHP_EOL, $lines);
+			return $message . PHP_EOL . $trace;
 		}
 		else
 		{
-			return '<div>' . implode('</div><div>', $lines) . '</div>';
+			return '<div>' . $message . '</div><div>' . $trace . '</div>';
 		}
 	}
 	
