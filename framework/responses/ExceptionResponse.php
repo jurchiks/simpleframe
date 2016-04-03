@@ -12,7 +12,7 @@ class ExceptionResponse extends ErrorResponse
 	public function __construct($e)
 	{
 		// TODO HHVM support for Throwable required
-		parent::__construct(self::getContent($e));
+		parent::__construct(self::makeContent($e));
 	}
 	
 	public function render()
@@ -20,36 +20,61 @@ class ExceptionResponse extends ErrorResponse
 		parent::render();
 	}
 	
-	/**
-	 * @param Exception|Throwable $e
-	 * @return string
-	 */
-	private static function getContent($e): string
+	private static function makeContent($e): string
 	{
-		// TODO HHVM support for Throwable required
+		/** @var Exception|Throwable $e */
 		$class = get_class($e);
+		$lines = [
+			"{$class} in {$e->getFile()} on line {$e->getLine()}:",
+			$e->getMessage(),
+			self::makeTrace($e),
+		];
+		
+		if (PHP_SAPI === 'cli')
+		{
+			return implode(PHP_EOL, $lines);
+		}
+		else
+		{
+			return '<div>' . implode('</div><div>', $lines) . '</div>';
+		}
+	}
+	
+	private static function makeTrace($e): string
+	{
+		/** @var Exception|Throwable $e */
 		$trace = [];
 		
 		foreach ($e->getTrace() as $item)
 		{
-			$trace[] = '<li>'
-				// exceptions thrown from within functions invoked via reflection don't have file & line in the function call trace
-				. (isset($item['file'], $item['line']) ? $item['file'] . ' line ' . $item['line'] . '<br/>' : '')
-				. (isset($item['class'], $item['type']) ? $item['class'] . $item['type'] : '') //
-				. $item['function'] . '(' . self::getArgs($item['args']) . ');' //
-				. '</li>';
+			// exceptions thrown from within functions invoked via reflection don't have source data in the function call trace
+			$source = (isset($item['file'], $item['line']) //
+				? $item['file'] . ' line ' . $item['line'] //
+				: 'Reflection invocation');
+			$call = (isset($item['class'], $item['type']) ? $item['class'] . $item['type'] : '') //
+				. $item['function'] . '(' . self::makeArgs($item['args']) . ');';
+			
+			if (PHP_SAPI === 'cli')
+			{
+				$trace[] = "\t* " . $source . PHP_EOL . "\t  " . $call . PHP_EOL;
+			}
+			else
+			{
+				$trace[] = '<li>' . $source . '<br/>' . $call . '</li>';
+			}
 		}
 		
 		$trace = implode('', $trace);
 		
-		return <<<CONTENT
-<div>{$class} in {$e->getFile()} line {$e->getLine()}:</div>
-<div>{$e->getMessage()}</div>
-<div><ul>{$trace}</ul></div>
-CONTENT;
+		if (PHP_SAPI !== 'cli')
+		{
+			$trace = '<ul>' . $trace . '</ul>';
+		}
+		
+		return $trace;
 	}
 	
-	private static function getArgs(array $args): string
+	private static function makeArgs(array $args): string
 	{
 		$data = [];
 		
@@ -61,7 +86,7 @@ CONTENT;
 			}
 			else if (is_array($arg))
 			{
-				$data[] = '[' . self::getArgs($arg) . ']';
+				$data[] = '[' . self::makeArgs($arg) . ']';
 			}
 			else if (is_string($arg))
 			{
