@@ -240,6 +240,13 @@ class Route
 	
 	private static function generatePattern(string $url, array &$parameters): string
 	{
+		$tmp = str_replace('/', '', $url);
+		
+		foreach ($parameters as $parameter)
+		{
+			$tmp = str_replace($parameter['search'], '', $tmp);
+		}
+		
 		foreach ($parameters as $name => $parameter)
 		{
 			$search = $parameter['search'];
@@ -270,6 +277,14 @@ class Route
 			}
 			
 			$url = str_replace($search, $replacement, $url);
+		}
+		
+		if ($tmp === '')
+		{
+			// if all parameters are optional and there is nothing else in the URL but parameters,
+			// then all parameters match their own path segment, in which case if none of them match,
+			// then $url = '', but that should match just '/'
+			$url = '(/|' . $url . ')';
 		}
 		
 		return '#\A' . $url . '\z#i';
