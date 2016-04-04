@@ -1,6 +1,9 @@
 <?php
 class EventHandler
 {
+	/** Callback arguments: string $name, array $handlerArguments */
+	const ON_ROUTE_MATCH = 'on_route_match';
+	
 	/** @var callable[][] */
 	private static $eventCallbacks = [];
 	

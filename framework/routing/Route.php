@@ -3,6 +3,7 @@ namespace routing;
 
 use App;
 use Closure;
+use EventHandler;
 use Exception;
 use InvalidArgumentException;
 use ReflectionFunction;
@@ -133,6 +134,9 @@ class Route
 		}
 		
 		$realParameters = self::getParameterValues($this->getHandlerParameters(), array_filter($urlParameters), $request);
+		
+		EventHandler::trigger(EventHandler::ON_ROUTE_MATCH, $this->name, $realParameters);
+		
 		$handler = $this->handler; // because PHPStorm doesn't recognise PHP7's ($this->handler)($params)...
 		$response = $handler(...$realParameters);
 		

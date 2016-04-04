@@ -1,6 +1,7 @@
 <?php
 use classes\Language;
 use classes\User;
+use controllers\AdminController;
 use controllers\ExampleController;
 use routing\Router;
 
@@ -28,3 +29,7 @@ Router::addRoute('example.index', '/example', [ExampleController::class, 'index'
 Router::addRoute('example.put', '/example/put', [ExampleController::class, 'put'], ['put']);
 Router::addRoute('example.test', '/example/test', [ExampleController::class, 'test']);
 Router::addRoute('example.test2', '/example/test2/{user}/{id2}', [ExampleController::class, 'test2']);
+
+Router::addRoute('admin.index', '/admin', [AdminController::class, 'index']);
+Router::addRoute('admin.login', '/admin/login', [AdminController::class, 'login']);
+Router::addRoute('admin.logout', '/admin/logout', [AdminController::class, 'logout']);
