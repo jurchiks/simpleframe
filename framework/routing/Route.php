@@ -132,7 +132,7 @@ class Route
 			return false;
 		}
 		
-		$realParameters = self::getParameterValues($this->getHandlerParameters(), $urlParameters, $request);
+		$realParameters = self::getParameterValues($this->getHandlerParameters(), array_filter($urlParameters), $request);
 		$handler = $this->handler; // because PHPStorm doesn't recognise PHP7's ($this->handler)($params)...
 		$response = $handler(...$realParameters);
 		
@@ -256,7 +256,7 @@ class Route
 				// in all other cases, only '{foo}' itself can be optional, although arguably it shouldn't be at all
 				if (($url[$start - 1] === '/') // right before it is a slash
 					&& ((($start > 1) && ($end === strlen($url))) // is the last, but not the first thing in the URL
-						|| (($end > strlen($url)) && ($url[$end] === '/'))) // is not the last thing in the URL
+						|| (($end < strlen($url)) && ($url[$end] === '/'))) // is not the last thing in the URL
 				)
 				{
 					$search = '/' . $search;
@@ -288,7 +288,7 @@ class Route
 			
 			if (is_object($parameter->getClass()))
 			{
-				$values[] = self::getParameterInjection($parameter, $value ?: '', $request);
+				$values[] = self::getParameterInjection($parameter, $value, $request);
 			}
 			else
 			{
@@ -299,7 +299,7 @@ class Route
 		return $values;
 	}
 	
-	private static function getParameterInjection(ReflectionParameter $parameter, string $value, Request $request)
+	private static function getParameterInjection(ReflectionParameter $parameter, $value, Request $request)
 	{
 		$class = $parameter->getClass();
 		
@@ -308,30 +308,35 @@ class Route
 			case Request::class:
 				return $request;
 			default:
+				if (!$class->isSubclassOf(UrlParameter::class))
+				{
+					return $class->newInstance(); // Parameter implementations don't have arguments
+				}
+				
+				if ($value === null)
+				{
+					if ($parameter->isOptional())
+					{
+						return $parameter->getDefaultValue();
+					}
+					
+					return $class->getMethod('getDefault')->invoke(null);
+				}
+				
 				try
 				{
-					if ($class->isSubclassOf(UrlParameter::class))
-					{
-						return $class->newInstance($value);
-					}
-					else
-					{
-						return $class->newInstance(); // Parameter implementations don't have arguments
-					}
+					return $class->newInstance($value);
 				}
 				catch (Exception $e)
 				{
-					if ($class->isSubclassOf(UrlParameter::class))
+					if ($parameter->isOptional())
 					{
-						if ($parameter->isOptional())
-						{
-							return $parameter->getDefaultValue();
-						}
-						
-						if ($class->getMethod('isOptional')->invoke(null))
-						{
-							return $class->getMethod('getDefault')->invoke(null);
-						}
+						return $parameter->getDefaultValue();
+					}
+					
+					if ($class->getMethod('isOptional')->invoke(null))
+					{
+						return $class->getMethod('getDefault')->invoke(null);
 					}
 					
 					throw $e;
