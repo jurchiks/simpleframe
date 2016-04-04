@@ -1,33 +1,27 @@
 <?php
 namespace responses;
 
+use js\tools\commons\templating\Engine;
+
 class TemplateResponse extends TextResponse
 {
-	private $file;
-	private $data;
+	private $template;
 	
 	public function __construct(string $name, array $data = [])
 	{
-		if (file_exists(ROOT_DIR . '/app/templates/' . $name . '.phtml'))
+		static $engine = null;
+		
+		if ($engine === null)
 		{
-			// enable overloading of default framework templateS
-			$this->file = ROOT_DIR . '/app/templates/' . $name . '.phtml';
-		}
-		else if (file_exists(ROOT_DIR . '/framework/templates/' . $name . '.phtml'))
-		{
-			$this->file = ROOT_DIR . '/framework/templates/' . $name . '.phtml';
-		}
-		else
-		{
-			throw new \InvalidArgumentException('Invalid template name ' . $name);
+			$engine = new Engine(ROOT_DIR . '/app/templates/');
+			$engine->addRoot(ROOT_DIR . '/framework/templates/');
 		}
 		
-		$this->data = $data;
+		$this->template = $engine->getTemplate($name, $data);
 	}
 	
 	public function render()
 	{
-		extract($this->data, EXTR_SKIP);
-		include $this->file;
+		echo $this->template->render();
 	}
 }
