@@ -17,17 +17,24 @@ use RuntimeException;
 class Route
 {
 	/** @var string */
-	private $url;
+	private $name;
 	/** @var callable */
 	private $handler;
 	/** @var string */
-	private $name;
+	private $url;
+	/** @var array[] */
+	private $parameters;
+	/** @var string */
+	private $pattern;
 	/** @var string[] */
 	private $methods;
-	/** @var array[] */
-	private $parameters = [];
-	/** @var string */
-	private $pattern = '';
+	
+	private static $primitiveTypePatterns = [
+		'int'    => '-?\d+',
+		'float'  => '-?\d+(\.\d+)?',
+		'bool'   => '0|1|false|true',
+		'string' => '[^/]+',
+	];
 	
 	private static $injectedParameters = [
 		Request::class,
@@ -35,9 +42,11 @@ class Route
 	
 	public function __construct(string $url, callable $handler, string $name, array $methods)
 	{
-		$this->url = $url;
-		$this->handler = $handler;
 		$this->name = $name;
+		$this->handler = $handler;
+		$this->url = '/' . trim($url, '/');
+		$this->parameters = $this->parseParameters();
+		$this->pattern = self::generatePattern($this->url, $this->parameters);
 		
 		if (empty($methods))
 		{
@@ -55,12 +64,6 @@ class Route
 			
 			$this->methods = $methods;
 		}
-		
-		if (strpos($url, ':') !== false)
-		{
-			$this->parameters = self::parseRouteParameters($url);
-			$this->pattern = self::generatePattern($this->parameters);
-		}
 	}
 	
 	public function getUrl()
@@ -77,10 +80,8 @@ class Route
 	{
 		$url = $this->url;
 		
-		foreach ($this->getFullParameters() as $name => $parameter)
+		foreach ($this->parameters as $name => $parameter)
 		{
-			$pattern = '~\/:' . $name . '\b~';
-			
 			if (isset($userParameters[$name]))
 			{
 				// parameter is provided; validate and replace
@@ -96,12 +97,18 @@ class Route
 					);
 				}
 				
-				$url = preg_replace($pattern, '/' . strval($userParameters[$name]), $url, 1);
+				if (is_bool($userParameters[$name]))
+				{
+					// strval(false) === '', but we need 0; casting false to int yields 0
+					$userParameters[$name] = intval($userParameters[$name]);
+				}
+				
+				$url = str_replace('{' . $name . '}', strval($userParameters[$name]), $url);
 			}
 			else if ($parameter['optional'])
 			{
 				// parameter is not provided, but is optional; remove from URL
-				$url = preg_replace($pattern, '', $url, 1);
+				$url = str_replace($parameter['search'], '', $url);
 			}
 			else
 			{
@@ -120,21 +127,14 @@ class Route
 			return false;
 		}
 		
-		if (empty($this->parameters))
-		{
-			if ($this->url !== $request->getPath())
-			{
-				return false;
-			}
-			
-			$parameters = [];
-		}
-		else if (preg_match($this->pattern, $request->getPath(), $parameters) !== 1)
+		if (preg_match($this->pattern, $request->getPath(), $urlParameters) !== 1)
 		{
 			return false;
 		}
 		
-		$response = self::invokeAction($this->getReflectedHandler(), $parameters, $request);
+		$realParameters = self::getParameterValues($this->getHandlerParameters(), $urlParameters, $request);
+		$handler = $this->handler; // because PHPStorm doesn't recognise PHP7's ($this->handler)($params)...
+		$response = $handler(...$realParameters);
 		
 		self::handleResponse($response);
 		
@@ -142,142 +142,125 @@ class Route
 	}
 	
 	/**
-	 * @return ReflectionFunction|ReflectionMethod
+	 * @return ReflectionParameter[]
 	 */
-	private function getReflectedHandler()
+	private function getHandlerParameters(): array
 	{
-		static $refHandlers = [];
-		
-		if (empty($refHandlers[$this->url]))
+		if ($this->handler instanceof Closure)
 		{
-			if ($this->handler instanceof Closure)
-			{
-				$refHandler = new ReflectionFunction($this->handler);
-			}
-			else
-			{
-				$refHandler = new ReflectionMethod($this->handler[0], $this->handler[1]);
-			}
-			
-			$refHandlers[$this->url] = $refHandler;
-		}
-		
-		return $refHandlers[$this->url];
-	}
-	
-	private function getFullParameters()
-	{
-		static $processed = [];
-		
-		if (empty($processed[$this->url]))
-		{
-			$refParameters = $this->getReflectedHandler()->getParameters();
-			
-			foreach ($refParameters as $refParameter)
-			{
-				if (is_object($refParameter->getClass()))
-				{
-					if (in_array($refParameter->getClass()->getName(), self::$injectedParameters))
-					{
-						// skip injected parameters
-						continue;
-					}
-				}
-				
-				$name = $refParameter->getName();
-				
-				if (!isset($this->parameters[$name]))
-				{
-					throw new RouteException('Route definition missing handler parameter "' . $name . '"');
-				}
-				
-				$this->parameters[$name]['optional'] = $refParameter->isOptional();
-				$this->parameters[$name]['type'] = self::getParameterType($refParameter);
-			}
-			
-			$processed[$this->url] = true;
-		}
-		
-		return $this->parameters;
-	}
-	
-	/**
-	 * @param ReflectionFunction|ReflectionMethod $refHandler
-	 * @param array $urlParameters
-	 * @param Request $request
-	 * @return mixed
-	 */
-	private static function invokeAction($refHandler, array $urlParameters, Request $request)
-	{
-		$realParameters = self::parseRealParameters($refHandler->getParameters(), $urlParameters, $request);
-		
-		if ($refHandler instanceof ReflectionFunction)
-		{
-			return $refHandler->invokeArgs($realParameters);
+			$refHandler = new ReflectionFunction($this->handler);
 		}
 		else
 		{
-			return $refHandler->invokeArgs(null, $realParameters);
+			$refHandler = new ReflectionMethod($this->handler[0], $this->handler[1]);
 		}
+		
+		return $refHandler->getParameters();
 	}
 	
-	private static function parseRouteParameters(string $url)
+	private function parseParameters(): array
 	{
 		$parameters = [];
-		$offset = 0;
 		
-		while (($start = strpos($url, ':', $offset)) !== false)
+		foreach ($this->getHandlerParameters() as $refParameter)
 		{
-			$end = strpos($url, '/', $start);
+			$name = $refParameter->getName();
+			$type = self::getParameterType($refParameter);
+			$class = $refParameter->getClass();
 			
-			if ($end === false)
+			if (is_object($class))
 			{
-				$length = strlen($url) - $start;
+				if (in_array($type, self::$injectedParameters))
+				{
+					// skip injected parameters
+					continue;
+				}
+				
+				if (!$class->implementsInterface(Parameter::class))
+				{
+					throw new RouteParameterException(
+						'Route parameter "' . $name . '" does not implement the Parameter interface'
+						. ' and is not an injection'
+					);
+				}
 			}
-			else
+			else if (!isset(self::$primitiveTypePatterns[$type]))
 			{
-				$length = $end - $start - 1;
+				throw new RouteParameterException(
+					'Unsupported parameter type "' . $type . '" for parameter "' . $name . '"'
+				);
 			}
 			
-			$name = substr($url, $start + 1, $length);
-			
-			$parameters[$name] = [
-				'prefix' => substr($url, $offset, $start - $offset - 1),
-			];
-			
-			if ($end === false)
-			{
-				$offset = strlen($url);
-			}
-			else
-			{
-				$offset = $end;
-			}
+			$parameters[$name] = self::getParameterData($refParameter, $type);
 		}
 		
 		return $parameters;
 	}
 	
-	private static function generatePattern(array $parameters)
+	private static function getParameterData(ReflectionParameter $parameter, string $type): array
 	{
-		$pattern = '~\A';
+		$class = $parameter->getClass();
 		
-		foreach ($parameters as $name => $parameter)
+		$data = [
+			'type' => $type,
+			'search' => '{' . $parameter->getName() . '}',
+		];
+		
+		if (is_object($class)) // implements Parameter
 		{
-			$pattern .= $parameter['prefix'];
-			$pattern .= '(/(?P<' . $name . '>[^/]*))?';
+			$data['pattern'] = $class->getMethod('getPattern')->invoke(null);
+			$data['optional'] = $parameter->isOptional() || $class->getMethod('isOptional')->invoke(null);
+		}
+		else
+		{
+			$data['pattern'] = self::$primitiveTypePatterns[$type];
+			$data['optional'] = $parameter->isOptional();
 		}
 		
-		$pattern .= '\z~i';
-		
-		return $pattern;
+		return $data;
 	}
 	
-	private static function parseRealParameters(array $handlerParameters, array $urlParameters, Request $request)
+	private static function generatePattern(string $url, array &$parameters): string
+	{
+		foreach ($parameters as $name => $parameter)
+		{
+			$search = $parameter['search'];
+			$replacement = '(?P<' . $name . '>' . $parameter['pattern'] . ')';
+			
+			$start = strpos($url, $search);
+			$end = $start + strlen($search);
+			
+			if ($parameter['optional'])
+			{
+				// if a parameter is optional and is enclosed in slashes, like so - "/{foo}/..." -,
+				// then '/{foo}' as a whole can be optional
+				// the only exception is if the whole URL is just "/{foo}", in which case the / cannot be included
+				// in all other cases, only '{foo}' itself can be optional, although arguably it shouldn't be at all
+				if (($url[$start - 1] === '/') // right before it is a slash
+					&& ((($start > 1) && ($end === strlen($url))) // is the last, but not the first thing in the URL
+						|| (($end > strlen($url)) && ($url[$end] === '/')))) // is not the last thing in the URL
+				{
+					$search = '/' . $search;
+					$replacement = '(/' . $replacement . ')';
+					
+					// FIXME yeah, this is a side-effect of this method, but there's no other place to put this
+					$parameters[$name]['search'] = $search;
+				}
+				
+				$replacement .= '?';
+			}
+			
+			$url = str_replace($search, $replacement, $url);
+		}
+		
+		return '#\A' . $url . '\z#i';
+	}
+	
+	private static function getParameterValues(array $handlerParameters, array $urlParameters, Request $request): array
 	{
 		// ensure the parameters are passed in in the same order they are declared in the method
 		// also check for optional parameters and custom injections
-		$realParameters = [];
+		$values = [];
 		
 		/** @var ReflectionParameter[] $handlerParameters */
 		foreach ($handlerParameters as $parameter)
@@ -286,18 +269,18 @@ class Route
 			
 			if (is_object($parameter->getClass()))
 			{
-				$realParameters[$parameter->getName()] = self::parseParameterInjection($parameter, $value ?: '', $request);
+				$values[] = self::getParameterInjection($parameter, $value ?: '', $request);
 			}
 			else
 			{
-				$realParameters[$parameter->getName()] = self::parseParameterValue($parameter, $value);
+				$values[] = self::getParameterValue($parameter, $value);
 			}
 		}
 		
-		return $realParameters;
+		return $values;
 	}
 	
-	private static function parseParameterInjection(ReflectionParameter $parameter, string $value, Request $request)
+	private static function getParameterInjection(ReflectionParameter $parameter, string $value, Request $request)
 	{
 		$class = $parameter->getClass();
 		
@@ -319,6 +302,11 @@ class Route
 							return $parameter->getDefaultValue();
 						}
 						
+						if ($class->getMethod('isOptional')->invoke(null))
+						{
+							return $class->getMethod('getDefault')->invoke(null);
+						}
+						
 						throw $e;
 					}
 				}
@@ -327,7 +315,7 @@ class Route
 		throw new RouteParameterException('Unsupported parameter "' . $class->getName() . '"');
 	}
 	
-	private static function parseParameterValue(ReflectionParameter $parameter, string $value = null)
+	private static function getParameterValue(ReflectionParameter $parameter, string $value = null)
 	{
 		if ($value !== null)
 		{
@@ -347,43 +335,23 @@ class Route
 	
 	private static function tryCastParameter(ReflectionParameter $parameter, string $value)
 	{
-		$type = self::getParameterType($parameter);
-		
-		switch ($type)
+		switch (self::getParameterType($parameter))
 		{
-			case 'mixed':
-			case 'string':
-				return $value;
 			case 'int':
-				if (is_numeric($value))
-				{
-					return intval($value);
-				}
-				break;
+				return intval($value);
 			case 'float':
-				if (is_numeric($value))
-				{
-					return floatval($value);
-				}
-				break;
+				return floatval($value);
 			case 'bool':
-				if (($value === '0') || (strcasecmp($value, 'false') === 0))
-				{
-					return false;
-				}
-				
 				if (($value === '1') || (strcasecmp($value, 'true') === 0))
 				{
 					return true;
 				}
-				break;
+				
+				return false;
+			case 'string':
 			default:
-				throw new RouteException(sprintf('Unsupported parameter type %s', $type));
+				return $value;
 		}
-		
-		throw new RouteParameterException(
-			sprintf('Route parameter "%s" has an invalid value, must be %s', $parameter->getName(), $type)
-		);
 	}
 	
 	private static function getParameterType(ReflectionParameter $parameter)
@@ -399,7 +367,7 @@ class Route
 		if (!$parameter->hasType())
 		{
 			// no explicit type specified, assuming anything is allowed
-			return 'mixed';
+			return 'string';
 		}
 		
 		$type = $parameter->getType()->__toString();
@@ -433,7 +401,7 @@ class Route
 		}
 		else if (is_bool($response))
 		{
-			echo($response ? 'TRUE' : 'FALSE');
+			echo $response ? 'TRUE' : 'FALSE';
 		}
 		else if (is_scalar($response))
 		{
@@ -446,7 +414,10 @@ class Route
 		else
 		{
 			throw new RuntimeException(
-				sprintf('Unsupported response type %s, consider using a Response', gettype($response))
+				sprintf(
+					'Unsupported response type "%s", consider using one of the Response classes',
+					gettype($response)
+				)
 			);
 		}
 	}

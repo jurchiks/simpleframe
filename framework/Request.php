@@ -9,7 +9,7 @@ class Request
 	public function __construct(string $method, string $route, array $data)
 	{
 		$path = substr($route, 0, strpos($route, '?') ?: strlen($route));
-		$path = rtrim($path, '/') ?: '/';
+		$path = '/' . trim($path, '/');
 		
 		$this->method = $method;
 		$this->path = $path;

@@ -15,7 +15,7 @@ class User implements Parameter
 	
 	public function __construct(string $value)
 	{
-		if (!is_numeric($value) || !isset(self::$users[intval($value)]))
+		if (!isset(self::$users[intval($value)]))
 		{
 			throw new RouteParameterException('Invalid user ID');
 		}
@@ -27,6 +27,21 @@ class User implements Parameter
 	public function __toString(): string
 	{
 		return strval($this->id);
+	}
+	
+	public static function getPattern(): string
+	{
+		return '\d+';
+	}
+	
+	public static function isOptional(): bool
+	{
+		return false;
+	}
+	
+	public static function getDefault(): Parameter
+	{
+		throw new RouteParameterException('No default value available');
 	}
 	
 	public function getId(): int
