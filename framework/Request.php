@@ -1,19 +1,25 @@
 <?php
 
+use js\tools\commons\upload\UploadedFileCollection;
+
 class Request
 {
 	private $method;
 	private $path;
 	private $data;
+	private $files;
+	private $referer;
 	
-	public function __construct(string $method, string $route, array $data)
+	public function __construct(string $method, string $route, array $data, string $referer)
 	{
 		$path = substr($route, 0, strpos($route, '?') ?: strlen($route));
 		$path = '/' . trim($path, '/');
 		
 		$this->method = $method;
 		$this->path = $path;
-		$this->data = $data;
+		$this->data = new Data($data);
+		$this->files = new UploadedFileCollection($_FILES);
+		$this->referer = $referer;
 	}
 	
 	/**
@@ -32,7 +38,7 @@ class Request
 	 * @param string $method one of [get, post, put, delete, head, options]
 	 * @return bool true if the method matches, false otherwise
 	 */
-	public function isMethod(string $method)
+	public function isMethod(string $method): bool
 	{
 		return (strcasecmp($this->method, $method) === 0);
 	}
@@ -42,25 +48,29 @@ class Request
 	 *
 	 * @return string e.g. /foo/bar
 	 */
-	public function getPath()
+	public function getPath(): string
 	{
 		return $this->path;
 	}
 	
 	/**
-	 * Retrieve parameter(s) passed in the request.
-	 *
-	 * @param string $key : the name of the parameter to get; if not specified, all parameters are returned
-	 * @return string[]|string|null an array containing all parameters, the value of the specified parameter
-	 * or null if the parameter does not exist
+	 * Retrieve request data.
 	 */
-	public function getData(string $key = null)
+	public function getData(): Data
 	{
-		if (is_null($key))
-		{
-			return $this->data;
-		}
-		
-		return ($this->data[$key] ?? null);
+		return $this->data;
+	}
+	
+	/**
+	 * Retrieve uploaded files.
+	 */
+	public function getFiles(): UploadedFileCollection
+	{
+		return $this->files;
+	}
+	
+	public function getReferer(): string
+	{
+		return $this->referer;
 	}
 }

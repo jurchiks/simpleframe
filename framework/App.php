@@ -177,6 +177,7 @@ final class App
 			
 			$method = $argv[1];
 			$route = $argv[2];
+			$referer = '';
 			
 			if (isset($argv[3]))
 			{
@@ -187,6 +188,7 @@ final class App
 		{
 			$method = strtolower($_SERVER['REQUEST_METHOD']);
 			$route = $_SERVER['REQUEST_URI'];
+			$referer = $_SERVER['HTTP_REFERER'] ?? '';
 			
 			if (!in_array($method, self::REQUEST_METHODS))
 			{
@@ -208,7 +210,7 @@ final class App
 			}
 		}
 		
-		$request = new Request($method, $route, $data);
+		$request = new Request($method, $route, $data, $referer);
 		
 		Router::render($request);
 	}
