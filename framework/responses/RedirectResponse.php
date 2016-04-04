@@ -16,5 +16,6 @@ class RedirectResponse implements Response
 	{
 		http_response_code($this->isPermanent ? 301 : 302);
 		header('Location: ' . $this->url);
+		die();
 	}
 }
