@@ -5,18 +5,12 @@ class Config
 {
 	use StaticDataAccessor;
 	
-	protected static function getData(): array
+	protected static function load(): array
 	{
-		static $config = null;
+		$globalConfig = self::loadFile(ROOT_DIR . '/app/config.global.php', true);
+		$userConfig = self::loadFile(ROOT_DIR . '/app/config.user.php', false);
 		
-		if (is_null($config))
-		{
-			$globalConfig = self::loadFile(ROOT_DIR . '/app/config.global.php', true);
-			$userConfig = self::loadFile(ROOT_DIR . '/app/config.user.php', false);
-			$config = array_merge($globalConfig, $userConfig);
-		}
-		
-		return $config;
+		return array_merge($globalConfig, $userConfig);
 	}
 	
 	private static function loadFile(string $path, bool $isGlobal): array

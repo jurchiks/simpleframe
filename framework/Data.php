@@ -12,6 +12,6 @@ class Data implements JsonSerializable
 	
 	public function jsonSerialize()
 	{
-		return $this->getData();
+		return $this->getAll();
 	}
 }
