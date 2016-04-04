@@ -1,6 +1,7 @@
 <?php
 namespace controllers;
 
+use classes\TestInjection;
 use classes\User;
 use Controller;
 use Logger;
@@ -9,11 +10,16 @@ use responses\JsonResponse;
 
 class ExampleController extends Controller
 {
-	public static function index(Request $request)
+	public static function index(Request $request, TestInjection $ti)
 	{
 		Logger::log(Logger::INFO, 'example log message');
 		
-		return 'route: ' . $request->getPath() . ', next up: ' . self::route('example.test2', ['user' => new User(1)], ['foo' => 'bar']);
+		return 'route: ' . $request->getPath() . ', random injection data: ' . $ti->getSomeData() . ', next up: '
+		. self::route(
+			'example.test2',
+			['user' => new User(1)],
+			['foo' => 'bar']
+		);
 	}
 	
 	public static function put(Request $request)

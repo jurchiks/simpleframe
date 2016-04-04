@@ -2,9 +2,9 @@
 namespace classes;
 
 use routing\exceptions\RouteParameterException;
-use routing\Parameter;
+use routing\UrlParameter;
 
-class User implements Parameter
+class User extends UrlParameter
 {
 	// this would usually be in database
 	private static $users = [
@@ -32,16 +32,6 @@ class User implements Parameter
 	public static function getPattern(): string
 	{
 		return '\d+';
-	}
-	
-	public static function isOptional(): bool
-	{
-		return false;
-	}
-	
-	public static function getDefault(): Parameter
-	{
-		throw new RouteParameterException('No default value available');
 	}
 	
 	public function getId(): int

@@ -179,9 +179,27 @@ class Route
 				if (!$class->implementsInterface(Parameter::class))
 				{
 					throw new RouteParameterException(
-						'Route parameter "' . $name . '" does not implement the Parameter interface'
-						. ' and is not an injection'
+						'Route parameter "' . $name . '" must be an instance of Parameter or UrlParameter'
 					);
+				}
+				
+				if (!$class->isInstantiable())
+				{
+					throw new RouteParameterException(
+						'Route parameter "' . $name . '" must be an instantiable implementation'
+					);
+				}
+				
+				if (!$class->isSubclassOf(UrlParameter::class))
+				{
+					if ($refParameter->isOptional())
+					{
+						throw new RouteParameterException(
+							'Route parameter "' . $name . '" cannot be optional; it is a DI parameter'
+						);
+					}
+					
+					continue; // is Parameter but not UrlParameter = DI, skip
 				}
 			}
 			else if (!isset(self::$primitiveTypePatterns[$type]))
@@ -202,11 +220,11 @@ class Route
 		$class = $parameter->getClass();
 		
 		$data = [
-			'type' => $type,
+			'type'   => $type,
 			'search' => '{' . $parameter->getName() . '}',
 		];
 		
-		if (is_object($class)) // implements Parameter
+		if (is_object($class)) // UrlParameter
 		{
 			$data['pattern'] = $class->getMethod('getPattern')->invoke(null);
 			$data['optional'] = $parameter->isOptional() || $class->getMethod('isOptional')->invoke(null);
@@ -238,7 +256,8 @@ class Route
 				// in all other cases, only '{foo}' itself can be optional, although arguably it shouldn't be at all
 				if (($url[$start - 1] === '/') // right before it is a slash
 					&& ((($start > 1) && ($end === strlen($url))) // is the last, but not the first thing in the URL
-						|| (($end > strlen($url)) && ($url[$end] === '/')))) // is not the last thing in the URL
+						|| (($end > strlen($url)) && ($url[$end] === '/'))) // is not the last thing in the URL
+				)
 				{
 					$search = '/' . $search;
 					$replacement = '(/' . $replacement . ')';
@@ -289,13 +308,20 @@ class Route
 			case Request::class:
 				return $request;
 			default:
-				if ($class->implementsInterface(Parameter::class))
+				try
 				{
-					try
+					if ($class->isSubclassOf(UrlParameter::class))
 					{
 						return $class->newInstance($value);
 					}
-					catch (Exception $e)
+					else
+					{
+						return $class->newInstance(); // Parameter implementations don't have arguments
+					}
+				}
+				catch (Exception $e)
+				{
+					if ($class->isSubclassOf(UrlParameter::class))
 					{
 						if ($parameter->isOptional())
 						{
@@ -306,13 +332,11 @@ class Route
 						{
 							return $class->getMethod('getDefault')->invoke(null);
 						}
-						
-						throw $e;
 					}
+					
+					throw $e;
 				}
 		}
-		
-		throw new RouteParameterException('Unsupported parameter "' . $class->getName() . '"');
 	}
 	
 	private static function getParameterValue(ReflectionParameter $parameter, string $value = null)
