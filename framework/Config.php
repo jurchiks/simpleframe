@@ -10,7 +10,7 @@ class Config
 		$globalConfig = self::loadFile(ROOT_DIR . '/app/config.global.php', true);
 		$userConfig = self::loadFile(ROOT_DIR . '/app/config.user.php', false);
 		
-		return array_merge($globalConfig, $userConfig);
+		return self::mergeConfigs($globalConfig, $userConfig);
 	}
 	
 	private static function loadFile(string $path, bool $isGlobal): array
@@ -30,5 +30,43 @@ class Config
 		}
 		
 		return $config;
+	}
+	
+	// This method differs from array_replace_recursive() in that if an array with only numeric keys exists
+	// in both arrays, it will be completely replaced, not merged (i.e. only maps are merged, lists are replaced)
+	private static function mergeConfigs(array $global, array $user)
+	{
+		foreach ($user as $key => $value)
+		{
+			if (!isset($global[$key])
+				|| (gettype($value) !== gettype($global[$key]))
+				|| !is_array($value))
+			{
+				$global[$key] = $value;
+			}
+			else if (self::isList($value) && self::isList($global[$key]))
+			{
+				$global[$key] = $value;
+			}
+			else
+			{
+				$global[$key] = self::mergeConfigs($global[$key], $value);
+			}
+		}
+		
+		return $global;
+	}
+	
+	private static function isList(array $arr)
+	{
+		foreach ($arr as $key => $_)
+		{
+			if (!is_int($key))
+			{
+				return false;
+			}
+		}
+		
+		return true;
 	}
 }
