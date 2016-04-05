@@ -1,7 +1,6 @@
 <?php
 namespace routing;
 
-use InvalidArgumentException;
 use Request;
 use routing\exceptions\RouteNotFoundException;
 
@@ -41,15 +40,35 @@ class Router
 	
 	/**
 	 * @param string $name : the name of the route to link
-	 * @param array $parameters : a map of parameter names => values
-	 * @return string|null the link to the named route with the parameters replaced, or null if no route was found
-	 * @throws InvalidArgumentException if the parameters are invalid
+	 * @param array $namedParams : a map of parameter names => values
+	 * @param array $getParams : GET parameters to append to the query
+	 * @param bool $isAbsolute : if true, an absolute URL will be generated
+	 * @return null|string the link to the named route with the parameters replaced, or null if no route was found
 	 */
-	public static function link(string $name, array $parameters = [])
+	public static function link(string $name, array $namedParams = [], array $getParams = [], bool $isAbsolute = false)
 	{
 		if (isset(self::$routes[$name]))
 		{
-			return self::$routes[$name]->generateLink($parameters);
+			$route = self::$routes[$name]->generateLink($namedParams);
+			
+			if (empty($getParams))
+			{
+				$query = '';
+			}
+			else
+			{
+				$query = '?' . http_build_query($getParams, '', '&');
+			}
+			
+			$prefix = '';
+			
+			if ($isAbsolute)
+			{
+				$prefix = 'http' . ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 's' : '') . '//' //
+					. $_SERVER['HTTP_HOST'];
+			}
+			
+			return $prefix . $route . $query;
 		}
 		
 		return null;

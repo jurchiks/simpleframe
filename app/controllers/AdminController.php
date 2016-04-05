@@ -5,6 +5,8 @@ use classes\Session;
 use Controller;
 use Request;
 use responses\RedirectResponse;
+use responses\TemplateResponse;
+use routing\Router;
 
 class AdminController extends Controller
 {
@@ -17,7 +19,7 @@ class AdminController extends Controller
 	{
 		if (Session::isLoggedIn())
 		{
-			return new RedirectResponse($request->getReferer() ?: self::route('admin.index'));
+			return new RedirectResponse($request->getReferer() ?: Router::link('admin.index'));
 		}
 		
 		if ($request->isMethod('post'))
@@ -26,7 +28,7 @@ class AdminController extends Controller
 			
 			if (!$error)
 			{
-				return new RedirectResponse($request->getReferer() ?: self::route('admin.index'));
+				return new RedirectResponse($request->getReferer() ?: Router::link('admin.index'));
 			}
 		}
 		else
@@ -34,13 +36,13 @@ class AdminController extends Controller
 			$error = '';
 		}
 		
-		return self::template('admin/login', ['error' => $error]);
+		return new TemplateResponse('admin/login', ['error' => $error]);
 	}
 	
 	public static function logout()
 	{
 		Session::logout();
 		
-		return new RedirectResponse(self::route('admin.login'));
+		return new RedirectResponse(Router::link('admin.login'));
 	}
 }
