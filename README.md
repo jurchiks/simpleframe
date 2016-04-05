@@ -19,6 +19,8 @@ At the time of writing this, the framework only relies on two $_SERVER variables
 namely `REQUEST_METHOD` and `REQUEST_URI`, both of which are easy to simulate
 in a terminal.
 
+Alternatively, you can run custom console commands via `php index.php command[ arguments]`.
+
 ## Installation
 
 This project is available via composer:

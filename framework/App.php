@@ -16,6 +16,8 @@ final class App
 	private static $exceptionHandlers = [];
 	/** @var callable[] */
 	private static $shutdownHandlers = [];
+	/** @var callable[] */
+	private static $consoleHandlers = [];
 	
 	/**
 	 * @param string $exceptionClass : the full name of the exception to handle, e.g.\name\space\Exception::class
@@ -31,6 +33,44 @@ final class App
 	public static function registerShutdownHandler(callable $handler)
 	{
 		self::$shutdownHandlers[] = $handler;
+	}
+	
+	public static function registerConsoleHandler(string $handler, string $command = null)
+	{
+		if ($command === null)
+		{
+			if (!class_exists($handler)
+				|| !isset(class_parents($handler)[ConsoleHandler::class]))
+			{
+				throw new RuntimeException('Invalid console handler, only callables and classes allowed');
+			}
+			
+			$handlers = $handler::listMethods(); // PHPStorm warns about this, but it is actually supported by PHP
+			
+			foreach ($handlers as $handler)
+			{
+				if (isset(self::$consoleHandlers[$handler[1]]))
+				{
+					throw new RuntimeException('Duplicate console handler for command ' . $handler[1]);
+				}
+				
+				self::$consoleHandlers[$handler[1]] = $handler;
+			}
+		}
+		else
+		{
+			if (!is_callable($handler))
+			{
+				throw new RuntimeException('Invalid console handler, only callables and classes allowed');
+			}
+			
+			if (isset(self::$consoleHandlers[$command]))
+			{
+				throw new RuntimeException('Duplicate console handler for command ' . $command);
+			}
+			
+			self::$consoleHandlers[$command] = $handler;
+		}
 	}
 	
 	public static function init()
@@ -180,12 +220,21 @@ final class App
 		{
 			if (!isset($argv[1], $argv[2]) || !in_array($argv[1], self::REQUEST_METHODS))
 			{
+				if (isset(self::$consoleHandlers[$argv[1]]))
+				{
+					$handler = self::$consoleHandlers[$argv[1]]; // PHPStorm and (self::$var)($args) again...
+					$handler(...array_slice($argv, 2));
+					exit();
+				}
+				
 				echo 'Examples:', PHP_EOL, //
 					"\tphp index.php method path[ data]", PHP_EOL, //
 					"\tphp index.php get /foo", PHP_EOL, //
 					"\tphp index.php get /foo/bar a=1&b=2", PHP_EOL, //
 					"\tphp index.php post /foo/bar a=1&b=2", PHP_EOL, //
-					"\tphp index.php delete /foo/bar a=1&b=2", PHP_EOL;
+					"\tphp index.php delete /foo/bar a=1&b=2", PHP_EOL, //
+					"\t OR", PHP_EOL, //
+					"\tphp index.php command[ arguments]";
 				exit(1);
 			}
 			
