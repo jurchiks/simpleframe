@@ -1,5 +1,6 @@
 <?php
 use js\tools\commons\exceptions\LogException;
+use js\tools\commons\templating\Engine;
 use responses\ErrorResponse;
 use responses\ExceptionResponse;
 use responses\TemplateResponse;
@@ -155,6 +156,19 @@ final class App
 				}
 			}
 		);
+	}
+	
+	public static function getTemplatingEngine()
+	{
+		static $engine = null;
+		
+		if ($engine === null)
+		{
+			$engine = new Engine(ROOT_DIR . '/app/templates/');
+			$engine->addRoot(ROOT_DIR . '/framework/templates/');
+		}
+		
+		return $engine;
 	}
 	
 	public static function render()

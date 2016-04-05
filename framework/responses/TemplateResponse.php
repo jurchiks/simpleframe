@@ -1,7 +1,7 @@
 <?php
 namespace responses;
 
-use js\tools\commons\templating\Engine;
+use App;
 
 class TemplateResponse extends TextResponse
 {
@@ -9,15 +9,7 @@ class TemplateResponse extends TextResponse
 	
 	public function __construct(string $name, array $data = [])
 	{
-		static $engine = null;
-		
-		if ($engine === null)
-		{
-			$engine = new Engine(ROOT_DIR . '/app/templates/');
-			$engine->addRoot(ROOT_DIR . '/framework/templates/');
-		}
-		
-		$this->template = $engine->getTemplate($name, $data);
+		$this->template = App::getTemplatingEngine()->getTemplate($name, $data);
 	}
 	
 	public function render()
