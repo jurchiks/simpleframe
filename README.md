@@ -10,14 +10,20 @@ just show a `404 page not found`.
 
 ## Testing
 
-You can test almost any page (the exception being file uploads) by opening
-a terminal, going to the `/public` directory, and executing
+You can use the built-in PHP server to run the code. Just execute `php -S localhost:8000`
+in the `/public` directory and open `http://localhost:8000` in your browser.
+It works with pretty URLs, no need to prefix `/index.php` to your routes.
+
+You can test almost any page (the exception being file uploads) in the terminal
+by going to the `/public` directory and executing
 `php index.php METHOD ROUTE[ DATA]`, e.g. `php index.php get /`
 or `php index.php post /abc foo=bar&bar[0]=baz`.
+Redirects obviously won't work, and absolute URLs generated via the framework's
+router will be invalid, but aside from that, everything else will work the same.
 
-At the time of writing this, the framework only relies on two $_SERVER variables,
-namely `REQUEST_METHOD` and `REQUEST_URI`, both of which are easy to simulate
-in a terminal.
+At the time of writing this, the framework only relies on three $_SERVER variables,
+namely `REQUEST_METHOD`, `REQUEST_URI` and `HTTP_REFERER`.
+Absolute route generation will also use `HTTPS` and `HTTP_HOST` variables.
 
 Alternatively, you can run custom console commands via `php index.php command[ arguments]`.
 
