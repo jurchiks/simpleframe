@@ -1,7 +1,7 @@
 <?php
-namespace classes;
+namespace app\classes;
 
-use routing\Parameter;
+use simpleframe\routing\Parameter;
 
 class TestInjection implements Parameter
 {

@@ -1,15 +1,15 @@
 <?php
-namespace controllers;
+namespace app\controllers;
 
-use classes\TestInjection;
-use classes\User;
-use Controller;
-use Logger;
-use Request;
-use responses\ErrorResponse;
-use responses\JsonResponse;
-use responses\TemplateResponse;
-use routing\Router;
+use app\classes\TestInjection;
+use app\classes\User;
+use simpleframe\Controller;
+use simpleframe\Logger;
+use simpleframe\Request;
+use simpleframe\responses\ErrorResponse;
+use simpleframe\responses\JsonResponse;
+use simpleframe\responses\TemplateResponse;
+use simpleframe\routing\Router;
 
 class ExampleController extends Controller
 {

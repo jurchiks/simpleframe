@@ -1,9 +1,9 @@
 <?php
-use classes\Language;
-use classes\User;
-use controllers\AdminController;
-use controllers\ExampleController;
-use routing\Router;
+use app\classes\Language;
+use app\classes\User;
+use app\controllers\AdminController;
+use app\controllers\ExampleController;
+use simpleframe\routing\Router;
 
 // UrlParameter names in route URL must match handler parameter names.
 // This is to be sure that we correctly check the types and cast the values of the parameters.

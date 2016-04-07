@@ -11,11 +11,17 @@
   "license": "MIT",
   "require": {
     "php": ">=7.0.0",
+    "jurchiks/simpleframe-core": "^1.0.2",
     "jurchiks/commons": "~0.1.0"
   },
   "scripts": {
     "post-create-project-cmd": [
       "php -r \"chmod('logs', 0666);\""
     ]
+  },
+  "autoload": {
+    "psr-4": {
+      "app\\": "app/"
+    }
   }
 }

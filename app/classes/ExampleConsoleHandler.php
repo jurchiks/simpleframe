@@ -1,7 +1,7 @@
 <?php
-namespace classes;
+namespace app\classes;
 
-use ConsoleHandler;
+use simpleframe\ConsoleHandler;
 
 class ExampleConsoleHandler extends ConsoleHandler
 {

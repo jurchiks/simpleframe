@@ -1,8 +1,8 @@
 <?php
-namespace classes;
+namespace app\classes;
 
-use Config;
-use routing\UrlParameter;
+use simpleframe\Config;
+use simpleframe\routing\UrlParameter;
 
 class Language extends UrlParameter
 {

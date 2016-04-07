@@ -1,12 +1,12 @@
 <?php
-namespace controllers;
+namespace app\controllers;
 
-use classes\Session;
-use Controller;
-use Request;
-use responses\RedirectResponse;
-use responses\TemplateResponse;
-use routing\Router;
+use app\classes\Session;
+use simpleframe\Controller;
+use simpleframe\Request;
+use simpleframe\responses\RedirectResponse;
+use simpleframe\responses\TemplateResponse;
+use simpleframe\routing\Router;
 
 class AdminController extends Controller
 {

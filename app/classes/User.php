@@ -1,14 +1,14 @@
 <?php
-namespace classes;
+namespace app\classes;
 
-use routing\exceptions\RouteParameterException;
-use routing\UrlParameter;
+use simpleframe\routing\exceptions\RouteParameterException;
+use simpleframe\routing\UrlParameter;
 
 class User extends UrlParameter
 {
 	// this would usually be in database
 	private static $users = [
-		1 => 'admin'
+		1 => 'admin',
 	];
 	private $id;
 	private $name;

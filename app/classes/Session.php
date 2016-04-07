@@ -1,8 +1,8 @@
 <?php
-namespace classes;
+namespace app\classes;
 
-use Data;
 use js\tools\commons\traits\StaticDataWriter;
+use simpleframe\Data;
 
 class Session
 {
@@ -24,6 +24,7 @@ class Session
 	
 	/**
 	 * Authenticate a user based on submitted data.
+	 *
 	 * @param Data $requestData
 	 * @return string|null the error message on failure or null if no error occurred
 	 */
@@ -42,9 +43,12 @@ class Session
 			return 'Invalid password';
 		}
 		
-		self::set('user', [
-			'login' => $requestData->get('login'),
-		]);
+		self::set(
+			'user',
+			[
+				'login' => $requestData->get('login'),
+			]
+		);
 		
 		return null;
 	}
