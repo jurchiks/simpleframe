@@ -18,11 +18,11 @@ class ExampleController extends Controller
 		Logger::log(Logger::INFO, 'example log message');
 		
 		return 'route: ' . $request->getPath() . ', random injection data: ' . $ti->getSomeData() . ', next up: '
-		. Router::link(
-			'example.test2',
-			['user' => new User(1)],
-			['foo' => 'bar']
-		);
+			. Router::link(
+				'example.test2',
+				['user' => new User(1)]
+			)
+			->setQueryParameters(['foo' => 'bar']);
 	}
 	
 	public static function put(Request $request)
