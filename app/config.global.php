@@ -3,6 +3,7 @@ return [
 	'environment' => 'production',
 	'debug'       => false,
 	'timezone'    => 'Europe/Riga',
+	'host'        => 'dom.ain',
 	'app'         => [
 		'name'      => 'your-app-name',
 		'crypto'    => [

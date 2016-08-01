@@ -1,8 +1,8 @@
 <?php
 namespace app\classes;
 
+use js\tools\commons\http\Parameters;
 use js\tools\commons\traits\StaticDataWriter;
-use simpleframe\Data;
 
 class Session
 {
@@ -25,10 +25,10 @@ class Session
 	/**
 	 * Authenticate a user based on submitted data.
 	 *
-	 * @param Data $requestData
+	 * @param Parameters $requestData
 	 * @return string|null the error message on failure or null if no error occurred
 	 */
-	public static function login(Data $requestData)
+	public static function login(Parameters $requestData)
 	{
 		if (!$requestData->get('login') || !$requestData->get('password'))
 		{

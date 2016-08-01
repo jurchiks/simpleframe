@@ -3,9 +3,9 @@ namespace app\controllers;
 
 use app\classes\TestInjection;
 use app\classes\User;
+use js\tools\commons\http\Request;
 use simpleframe\Controller;
 use simpleframe\Logger;
-use simpleframe\Request;
 use simpleframe\responses\ErrorResponse;
 use simpleframe\responses\JsonResponse;
 use simpleframe\responses\TemplateResponse;
@@ -17,12 +17,13 @@ class ExampleController extends Controller
 	{
 		Logger::log(Logger::INFO, 'example log message');
 		
-		return 'route: ' . $request->getPath() . ', random injection data: ' . $ti->getSomeData() . ', next up: '
+		return 'path: ' . $request->getUri()->getPath() . ', random injection data: ' . $ti->getSomeData() . ', next up: '
 			. Router::link(
 				'example.test2',
 				['user' => new User(1)]
 			)
-			->setQueryParameters(['foo' => 'bar']);
+			->setQueryParameters(['foo' => 'b a r'])
+			->getAbsolute();
 	}
 	
 	public static function put(Request $request)

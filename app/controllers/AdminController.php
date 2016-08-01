@@ -2,8 +2,8 @@
 namespace app\controllers;
 
 use app\classes\Session;
+use js\tools\commons\http\Request;
 use simpleframe\Controller;
-use simpleframe\Request;
 use simpleframe\responses\RedirectResponse;
 use simpleframe\responses\TemplateResponse;
 use simpleframe\routing\Router;
