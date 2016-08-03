@@ -3,6 +3,8 @@ use app\classes\Language;
 use app\classes\User;
 use app\controllers\AdminController;
 use app\controllers\ExampleController;
+use js\tools\commons\http\Request;
+use simpleframe\routing\Route;
 use simpleframe\routing\Router;
 
 // UrlParameter names in route URL must match handler parameter names.
@@ -23,6 +25,13 @@ Router::addRoute(
 		// it is awkward if you don't specify the parameter (/foo--bar), but it works
 		return 'Hello, ' . ($user ? $user->getName() : 'World') . '! Your locale is ' . $lang->getValue();
 	}
+);
+Router::addRoutes(
+	(new Route('index3', '/foo/{bar}', function (string $bar, Request $request)
+	{
+		return $bar . '|' . $request->getUri();
+	}))
+	->setRequireHttps(true)
 );
 // route names have no strict scheme; anything (reasonable) will work
 Router::addRoute('example.index', '/example', [ExampleController::class, 'index']);
